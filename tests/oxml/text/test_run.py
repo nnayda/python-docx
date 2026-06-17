@@ -39,3 +39,15 @@ class DescribeCT_R:
         r = cast(CT_R, element(cxml))
 
         assert r.text == "\n\n-\tfoobar\t"
+
+
+class DescribeCT_R_footnote_reference:
+    """Unit-test suite for footnote-reference support on CT_R."""
+
+    def it_can_add_a_footnote_reference(self):
+        r = cast(CT_R, element("w:r"))
+
+        ref = r.add_footnoteReference()
+        ref.id = 2
+
+        assert r.footnoteReference_lst[0].id == 2

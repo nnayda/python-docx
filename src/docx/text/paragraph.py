@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Iterator, List, cast
 
 from docx.enum.style import WD_STYLE_TYPE
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml.text.run import CT_R
 from docx.shared import StoryChild
 from docx.styles.style import ParagraphStyle
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
     from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
     from docx.oxml.text.paragraph import CT_P
     from docx.styles.style import CharacterStyle
+    from docx.text.footnote import Footnote
 
 
 class Paragraph(StoryChild):
@@ -42,6 +44,41 @@ class Paragraph(StoryChild):
         if style:
             run.style = style
         return run
+
+    def add_hyperlink(
+        self,
+        text: str | None = None,
+        url: str = "",
+        style: str | CharacterStyle | None = None,
+    ) -> Hyperlink:
+        """Append an external hyperlink to `url`, returning the new |Hyperlink|.
+
+        When `text` is a string the hyperlink contains a single run with that text; when
+        |None| the returned |Hyperlink| starts empty for the caller to build via
+        `Hyperlink.add_run()`. The built-in "Hyperlink" character style is applied to the
+        run(s) and injected into the document's styles part if not already present.
+
+        Repeated calls with the same `url` share a single relationship.
+        """
+        self.part.ensure_hyperlink_style()
+        rId = self.part.relate_to(url, RT.HYPERLINK, is_external=True)
+        hyperlink = Hyperlink(self._p.add_hyperlink(rId), self)
+        if text:
+            hyperlink.add_run(text, style)
+        return hyperlink
+
+    def add_footnote(self, text: str | None = None) -> "Footnote":
+        """Add a footnote whose reference marker is appended at the end of this paragraph.
+
+        When `text` is a string the note contains that text; when |None| the returned
+        |Footnote| starts empty for the caller to build via `add_paragraph`/`add_run`.
+        """
+        # -- imported lazily to avoid a footnote<->paragraph<->run import cycle --
+        from docx.text.footnote import new_footnote_reference_run
+
+        footnote = self.part.add_footnote(text)
+        self._p.append(new_footnote_reference_run(footnote.id))
+        return footnote
 
     @property
     def alignment(self) -> WD_PARAGRAPH_ALIGNMENT | None:

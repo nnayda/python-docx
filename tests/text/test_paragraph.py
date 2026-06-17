@@ -10,6 +10,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml.text.paragraph import CT_P
 from docx.oxml.text.run import CT_R
 from docx.parts.document import DocumentPart
+from docx.text.hyperlink import Hyperlink
 from docx.text.paragraph import Paragraph
 from docx.text.parfmt import ParagraphFormat
 from docx.text.run import Run
@@ -398,3 +399,74 @@ class DescribeParagraph:
         run_ = instance_mock(request, Run, name="run_")
         run_2_ = instance_mock(request, Run, name="run_2_")
         return run_, run_2_
+
+
+class DescribeParagraph_add_footnote:
+    """Unit-test suite for Paragraph.add_footnote."""
+
+    def it_appends_a_reference_marker_at_the_end_of_the_paragraph(self):
+        from docx import Document
+
+        paragraph = Document().add_paragraph("body text")
+
+        footnote = paragraph.add_footnote("the note")
+
+        marker = paragraph._p.r_lst[-1]
+        assert marker.footnoteReference_lst[0].id == footnote.id
+        assert marker.style == "FootnoteReference"
+
+    def it_returns_a_footnote_carrying_the_text(self):
+        from docx import Document
+
+        footnote = Document().add_paragraph("body").add_footnote("the note")
+
+        assert footnote.text == "the note"
+        assert footnote.id == 1
+
+
+class DescribeParagraph_add_hyperlink:
+    """Unit-test suite for Paragraph.add_hyperlink."""
+
+    def it_appends_an_external_hyperlink_carrying_the_text(self):
+        from docx import Document
+
+        paragraph = Document().add_paragraph("see ")
+
+        hyperlink = paragraph.add_hyperlink(text="Google", url="https://google.com/")
+
+        assert isinstance(hyperlink, Hyperlink)
+        assert paragraph._p.hyperlink_lst == [hyperlink._hyperlink]
+        assert hyperlink.text == "Google"
+        assert hyperlink.url == "https://google.com/"
+
+    def it_applies_the_Hyperlink_style_to_the_run(self):
+        from docx import Document
+
+        paragraph = Document().add_paragraph()
+
+        hyperlink = paragraph.add_hyperlink(text="link", url="https://example.com/")
+
+        assert hyperlink.runs[0]._r.style == "Hyperlink"
+
+    def it_returns_an_empty_hyperlink_when_no_text_is_given(self):
+        from docx import Document
+
+        paragraph = Document().add_paragraph()
+
+        hyperlink = paragraph.add_hyperlink(url="https://example.com/")
+
+        assert hyperlink.runs == []
+        assert hyperlink.url == "https://example.com/"
+        # -- the caller can compose the visible text afterwards --
+        hyperlink.add_run("later")
+        assert hyperlink.text == "later"
+
+    def it_reuses_one_relationship_for_repeated_uses_of_the_same_url(self):
+        from docx import Document
+
+        paragraph = Document().add_paragraph()
+
+        first = paragraph.add_hyperlink(text="a", url="https://example.com/")
+        second = paragraph.add_hyperlink(text="b", url="https://example.com/")
+
+        assert first._hyperlink.rId == second._hyperlink.rId

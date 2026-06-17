@@ -13,6 +13,7 @@ from docx.oxml.xmlchemy import BaseOxmlElement, OptionalAttribute, ZeroOrMore, Z
 from docx.shared import TextAccumulator
 
 if TYPE_CHECKING:
+    from docx.oxml.footnotes import CT_FtnEdnRef
     from docx.oxml.shape import CT_Anchor, CT_Inline
     from docx.oxml.text.pagebreak import CT_LastRenderedPageBreak
     from docx.oxml.text.parfmt import CT_TabStop
@@ -29,11 +30,13 @@ class CT_R(BaseOxmlElement):
     get_or_add_rPr: Callable[[], CT_RPr]
     _add_drawing: Callable[[], CT_Drawing]
     _add_t: Callable[..., CT_Text]
+    add_footnoteReference: Callable[[], CT_FtnEdnRef]
 
     rPr: CT_RPr | None = ZeroOrOne("w:rPr")  # pyright: ignore[reportAssignmentType]
     br = ZeroOrMore("w:br")
     cr = ZeroOrMore("w:cr")
     drawing = ZeroOrMore("w:drawing")
+    footnoteReference = ZeroOrMore("w:footnoteReference")
     t = ZeroOrMore("w:t")
     tab = ZeroOrMore("w:tab")
 

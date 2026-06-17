@@ -25,10 +25,19 @@ class CT_P(BaseOxmlElement):
     get_or_add_pPr: Callable[[], CT_PPr]
     hyperlink_lst: List[CT_Hyperlink]
     r_lst: List[CT_R]
+    _add_hyperlink: Callable[..., CT_Hyperlink]
 
     pPr: CT_PPr | None = ZeroOrOne("w:pPr")  # pyright: ignore[reportAssignmentType]
     hyperlink = ZeroOrMore("w:hyperlink")
     r = ZeroOrMore("w:r")
+
+    def add_hyperlink(self, rId: str) -> CT_Hyperlink:
+        """Return a newly-appended `<w:hyperlink>` carrying external relationship `rId`.
+
+        Overrides the generated zero-argument `add_hyperlink()` to require the `r:id`
+        attribute referencing the relationship that holds the hyperlink target.
+        """
+        return self._add_hyperlink(rId=rId)
 
     def add_p_before(self) -> CT_P:
         """Return a new `<w:p>` element inserted directly prior to this one."""

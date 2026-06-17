@@ -4,6 +4,7 @@
 
 import pytest
 
+from docx import Document
 from docx.comments import Comments
 from docx.enum.style import WD_STYLE_TYPE
 from docx.opc.constants import CONTENT_TYPE as CT
@@ -13,6 +14,7 @@ from docx.opc.packuri import PackURI
 from docx.package import Package
 from docx.parts.comments import CommentsPart
 from docx.parts.document import DocumentPart
+from docx.parts.footnotes import FootnotesPart
 from docx.parts.hdrftr import FooterPart, HeaderPart
 from docx.parts.numbering import NumberingPart
 from docx.parts.settings import SettingsPart
@@ -20,6 +22,7 @@ from docx.parts.styles import StylesPart
 from docx.settings import Settings
 from docx.styles.style import BaseStyle
 from docx.styles.styles import Styles
+from docx.text.footnote import Footnote
 
 from ..unitutil.cxml import element
 from ..unitutil.mock import (
@@ -439,3 +442,76 @@ class DescribeDocumentPart:
     @pytest.fixture
     def _styles_part_prop_(self, request: FixtureRequest):
         return property_mock(request, DocumentPart, "_styles_part")
+
+
+class DescribeDocumentPart_footnotes:
+    """Unit-test suite for footnote support on DocumentPart."""
+
+    def it_lazily_creates_and_relates_a_footnotes_part(self):
+        document_part = Document().part
+
+        footnotes_part = document_part.footnotes_part
+
+        assert isinstance(footnotes_part, FootnotesPart)
+        assert document_part.part_related_by(RT.FOOTNOTES) is footnotes_part
+
+    def it_injects_the_built_in_footnote_styles(self):
+        document_part = Document().part
+
+        document_part._ensure_footnote_styles()
+
+        styles = document_part.styles
+        assert styles.get_by_id("FootnoteText", WD_STYLE_TYPE.PARAGRAPH).style_id == "FootnoteText"
+        assert (
+            styles.get_by_id("FootnoteReference", WD_STYLE_TYPE.CHARACTER).style_id
+            == "FootnoteReference"
+        )
+
+    def it_does_not_duplicate_styles_on_repeated_calls(self):
+        document_part = Document().part
+
+        document_part._ensure_footnote_styles()
+        document_part._ensure_footnote_styles()
+
+        style_ids = [s.style_id for s in document_part.styles]
+        assert style_ids.count("FootnoteText") == 1
+        assert style_ids.count("FootnoteReference") == 1
+
+    def it_adds_a_footnote_with_minted_id_and_text(self):
+        document_part = Document().part
+
+        footnote = document_part.add_footnote("A note.")
+
+        assert isinstance(footnote, Footnote)
+        assert footnote.id == 1
+        assert footnote.text == "A note."
+        assert document_part.add_footnote("Another.").id == 2
+
+
+class DescribeDocumentPart_hyperlinks:
+    """Unit-test suite for hyperlink-style support on DocumentPart."""
+
+    def it_injects_the_built_in_hyperlink_style(self):
+        document_part = Document().part
+
+        document_part._ensure_hyperlink_style()
+
+        styles = document_part.styles
+        assert styles.get_by_id("Hyperlink", WD_STYLE_TYPE.CHARACTER).style_id == "Hyperlink"
+
+    def it_does_not_duplicate_the_style_on_repeated_calls(self):
+        document_part = Document().part
+
+        document_part._ensure_hyperlink_style()
+        document_part._ensure_hyperlink_style()
+
+        style_ids = [s.style_id for s in document_part.styles]
+        assert style_ids.count("Hyperlink") == 1
+
+    def it_ensures_the_style_via_the_StoryPart_delegator(self):
+        document_part = Document().part
+
+        document_part.ensure_hyperlink_style()
+
+        style_ids = [s.style_id for s in document_part.styles]
+        assert style_ids.count("Hyperlink") == 1

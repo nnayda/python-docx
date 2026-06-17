@@ -6,7 +6,10 @@ from typing import IO, TYPE_CHECKING, cast
 
 from docx.document import Document
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
+from docx.oxml.ns import nsdecls
+from docx.oxml.parser import parse_xml
 from docx.parts.comments import CommentsPart
+from docx.parts.footnotes import FootnotesPart
 from docx.parts.hdrftr import FooterPart, HeaderPart
 from docx.parts.numbering import NumberingPart
 from docx.parts.settings import SettingsPart
@@ -14,6 +17,7 @@ from docx.parts.story import StoryPart
 from docx.parts.styles import StylesPart
 from docx.shape import InlineShapes
 from docx.shared import lazyproperty
+from docx.text.footnote import Footnote
 
 if TYPE_CHECKING:
     from docx.comments import Comments
@@ -43,6 +47,21 @@ class DocumentPart(StoryPart):
         header_part = HeaderPart.new(self.package)
         rId = self.relate_to(header_part, RT.HEADER)
         return header_part, rId
+
+    def add_footnote(self, text: str | None = None) -> Footnote:
+        """Return a newly-created |Footnote|, adding its content to the footnotes part.
+
+        When `text` is a string, the note contains a single paragraph with that text.
+        When `text` is |None|, the note contains a single empty paragraph ready for the
+        caller to populate via `Footnote.add_paragraph()` / `Footnote.add_run()`.
+        """
+        self._ensure_footnote_styles()
+        footnotes = self.footnotes_part.element
+        footnote_id = footnotes._next_id
+        ftn = footnotes.add_footnote(footnote_id)
+        footnote = Footnote(ftn, self.footnotes_part)
+        footnote._add_marked_paragraph(text)
+        return footnote
 
     @property
     def comments(self) -> Comments:
@@ -107,6 +126,72 @@ class DocumentPart(StoryPart):
             numbering_part = NumberingPart.new()
             self.relate_to(numbering_part, RT.NUMBERING)
             return numbering_part
+
+    @lazyproperty
+    def footnotes_part(self) -> FootnotesPart:
+        """The |FootnotesPart| for this document, created if not already present."""
+        try:
+            return cast(FootnotesPart, self.part_related_by(RT.FOOTNOTES))
+        except KeyError:
+            footnotes_part = FootnotesPart.new(self.package)
+            self.relate_to(footnotes_part, RT.FOOTNOTES)
+            return footnotes_part
+
+    def _ensure_footnote_styles(self) -> None:
+        """Inject the built-in `FootnoteText` and `FootnoteReference` styles when absent.
+
+        Idempotent: a style already defined (by id) is left untouched.
+        """
+        styles_elm = self._styles_part.element
+        for style_id, xml in (
+            ("FootnoteText", self._FOOTNOTE_TEXT_STYLE_XML),
+            ("FootnoteReference", self._FOOTNOTE_REFERENCE_STYLE_XML),
+        ):
+            if styles_elm.get_by_id(style_id) is None:
+                styles_elm.append(parse_xml(xml % nsdecls("w")))
+
+    _FOOTNOTE_TEXT_STYLE_XML = (
+        '<w:style %s w:type="paragraph" w:styleId="FootnoteText">'
+        '<w:name w:val="footnote text"/>'
+        '<w:basedOn w:val="Normal"/>'
+        '<w:uiPriority w:val="99"/>'
+        "<w:semiHidden/>"
+        "<w:unhideWhenUsed/>"
+        '<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'
+        '<w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>'
+        "</w:style>"
+    )
+    _FOOTNOTE_REFERENCE_STYLE_XML = (
+        '<w:style %s w:type="character" w:styleId="FootnoteReference">'
+        '<w:name w:val="footnote reference"/>'
+        '<w:uiPriority w:val="99"/>'
+        "<w:semiHidden/>"
+        "<w:unhideWhenUsed/>"
+        '<w:rPr><w:vertAlign w:val="superscript"/></w:rPr>'
+        "</w:style>"
+    )
+
+    def _ensure_hyperlink_style(self) -> None:
+        """Inject the built-in `Hyperlink` character style when absent.
+
+        Idempotent: a style already defined (by id) is left untouched.
+        """
+        styles_elm = self._styles_part.element
+        if styles_elm.get_by_id("Hyperlink") is None:
+            styles_elm.append(parse_xml(self._HYPERLINK_STYLE_XML % nsdecls("w")))
+
+    _HYPERLINK_STYLE_XML = (
+        '<w:style %s w:type="character" w:styleId="Hyperlink">'
+        '<w:name w:val="Hyperlink"/>'
+        '<w:basedOn w:val="DefaultParagraphFont"/>'
+        '<w:uiPriority w:val="99"/>'
+        "<w:unhideWhenUsed/>"
+        "<w:rPr>"
+        '<w:color w:val="0563C1" w:themeColor="hyperlink"/>'
+        '<w:u w:val="single"/>'
+        "</w:rPr>"
+        "</w:style>"
+    )
 
     def save(self, path_or_stream: str | IO[bytes]):
         """Save this document to `path_or_stream`, which can be either a path to a
