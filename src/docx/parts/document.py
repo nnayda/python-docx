@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import IO, TYPE_CHECKING, cast
 
 from docx.document import Document
-from docx.enum.style import WD_STYLE_TYPE
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml.ns import nsdecls
 from docx.oxml.parser import parse_xml
+from docx.parts.comments import CommentsPart
 from docx.parts.footnotes import FootnotesPart
 from docx.parts.hdrftr import FooterPart, HeaderPart
 from docx.parts.numbering import NumberingPart
@@ -20,6 +20,10 @@ from docx.shared import lazyproperty
 from docx.text.footnote import Footnote
 
 if TYPE_CHECKING:
+    from docx.comments import Comments
+    from docx.enum.style import WD_STYLE_TYPE
+    from docx.opc.coreprops import CoreProperties
+    from docx.settings import Settings
     from docx.styles.style import BaseStyle
 
 
@@ -60,7 +64,12 @@ class DocumentPart(StoryPart):
         return footnote
 
     @property
-    def core_properties(self):
+    def comments(self) -> Comments:
+        """|Comments| object providing access to the comments added to this document."""
+        return self._comments_part.comments
+
+    @property
+    def core_properties(self) -> CoreProperties:
         """A |CoreProperties| object providing read/write access to the core properties
         of this document."""
         return self.package.core_properties
@@ -106,14 +115,13 @@ class DocumentPart(StoryPart):
         return InlineShapes(self._element.body, self)
 
     @lazyproperty
-    def numbering_part(self):
-        """A |NumberingPart| object providing access to the numbering definitions for
-        this document.
+    def numbering_part(self) -> NumberingPart:
+        """A |NumberingPart| object providing access to the numbering definitions for this document.
 
         Creates an empty numbering part if one is not present.
         """
         try:
-            return self.part_related_by(RT.NUMBERING)
+            return cast(NumberingPart, self.part_related_by(RT.NUMBERING))
         except KeyError:
             numbering_part = NumberingPart.new()
             self.relate_to(numbering_part, RT.NUMBERING)
@@ -185,13 +193,13 @@ class DocumentPart(StoryPart):
         "</w:style>"
     )
 
-    def save(self, path_or_stream):
+    def save(self, path_or_stream: str | IO[bytes]):
         """Save this document to `path_or_stream`, which can be either a path to a
         filesystem location (a string) or a file-like object."""
         self.package.save(path_or_stream)
 
     @property
-    def settings(self):
+    def settings(self) -> Settings:
         """A |Settings| object providing access to the settings in the settings part of
         this document."""
         return self._settings_part.settings
@@ -203,14 +211,28 @@ class DocumentPart(StoryPart):
         return self._styles_part.styles
 
     @property
-    def _settings_part(self):
+    def _comments_part(self) -> CommentsPart:
+        """A |CommentsPart| object providing access to the comments added to this document.
+
+        Creates a default comments part if one is not present.
+        """
+        try:
+            return cast(CommentsPart, self.part_related_by(RT.COMMENTS))
+        except KeyError:
+            assert self.package is not None
+            comments_part = CommentsPart.default(self.package)
+            self.relate_to(comments_part, RT.COMMENTS)
+            return comments_part
+
+    @property
+    def _settings_part(self) -> SettingsPart:
         """A |SettingsPart| object providing access to the document-level settings for
         this document.
 
         Creates a default settings part if one is not present.
         """
         try:
-            return self.part_related_by(RT.SETTINGS)
+            return cast(SettingsPart, self.part_related_by(RT.SETTINGS))
         except KeyError:
             settings_part = SettingsPart.default(self.package)
             self.relate_to(settings_part, RT.SETTINGS)

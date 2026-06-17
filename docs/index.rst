@@ -74,12 +74,14 @@ User Guide
    user/install
    user/quickstart
    user/documents
+   user/tables
    user/text
    user/sections
    user/hdrftr
    user/api-concepts
    user/styles-understanding
    user/styles-using
+   user/comments
    user/shapes
 
 
@@ -95,6 +97,7 @@ API Documentation
    api/text
    api/table
    api/section
+   api/comments
    api/shape
    api/dml
    api/shared

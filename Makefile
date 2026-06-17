@@ -1,7 +1,6 @@
 BEHAVE = behave
 MAKE   = make
 PYTHON = python
-BUILD  = $(PYTHON) -m build
 TWINE  = $(PYTHON) -m twine
 
 .PHONY: accept build clean cleandocs coverage docs install opendocs sdist test
@@ -24,20 +23,21 @@ help:
 	@echo "  wheel        generate a binary distribution into dist/"
 
 accept:
-	$(BEHAVE) --stop
+	uv run $(BEHAVE) --stop
 
 build:
-	$(BUILD)
+	uv build
 
 clean:
-	find . -type f -name \*.pyc -exec rm {} \;
+	# find . -type f -name \*.pyc -exec rm {} \;
+	fd -e pyc -I -x rm
 	rm -rf dist *.egg-info .coverage .DS_Store
 
 cleandocs:
 	$(MAKE) -C docs clean
 
 coverage:
-	py.test --cov-report term-missing --cov=docx tests/
+	uv run pytest --cov-report term-missing --cov=docx tests/
 
 docs:
 	$(MAKE) -C docs html
@@ -49,16 +49,16 @@ opendocs:
 	open docs/.build/html/index.html
 
 sdist:
-	$(BUILD) --sdist .
+	uv build --sdist
 
 test:
-	pytest -x
+	uv run pytest -x
 
 test-upload: sdist wheel
-	$(TWINE) upload --repository testpypi dist/*
+	uv run $(TWINE) upload --repository testpypi dist/*
 
 upload: clean sdist wheel
-	$(TWINE) upload dist/*
+	uv run $(TWINE) upload dist/*
 
 wheel:
-	$(BUILD) --wheel .
+	uv build --wheel
