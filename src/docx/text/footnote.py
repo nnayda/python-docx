@@ -52,9 +52,7 @@ class Footnote(StoryChild):
         A first paragraph is created if the footnote body is empty.
         """
         p_lst = self._ftn.p_lst
-        paragraph = (
-            Paragraph(p_lst[-1], self._parent) if p_lst else self.add_paragraph()
-        )
+        paragraph = Paragraph(p_lst[-1], self._parent) if p_lst else self.add_paragraph()
         return paragraph.add_run(text, style)
 
     @property

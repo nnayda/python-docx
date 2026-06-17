@@ -195,6 +195,7 @@ class Table(StoryChild):
         """
         return _TblBorders(self._tbl, self)
 
+
 class _Cell(BlockItemContainer):
     """Table cell."""
 
@@ -332,6 +333,7 @@ class _Cell(BlockItemContainer):
         """
         return _CellBorders(self._tc, self)
 
+
 class _Column(Parented):
     """Table column."""
 
@@ -366,11 +368,11 @@ class _Column(Parented):
 
     @property
     def dont_split(self):
-        return self._get_bool_prop('cantSplit')
+        return self._get_bool_prop("cantSplit")
 
     @dont_split.setter
     def dont_split(self, value):
-        self._set_bool_prop('cantSplit', value)
+        self._set_bool_prop("cantSplit", value)
 
     def _get_bool_prop(self, name):
         """
@@ -387,7 +389,8 @@ class _Column(Parented):
         """
         trPr = self._element.get_or_add_trPr()
         trPr._set_bool_val(name, value)
-    
+
+
 class _Columns(Parented):
     """Sequence of |_Column| instances corresponding to the columns in a table.
 
@@ -580,6 +583,7 @@ class _Rows(Parented):
         """Reference to the |Table| object this row collection belongs to."""
         return self._parent.table
 
+
 class _Border(Parented):
     def __init__(self, name, cb, parent):
         super(_Border, self).__init__(parent)
@@ -596,7 +600,9 @@ class _Border(Parented):
             self._parent.remove_border(self.name)
             return
         self._parent.remove_border(self.name)
-        return self._parent.add_border(value, self.line, sz=self.size, space=self.space, color=self.color)
+        return self._parent.add_border(
+            value, self.line, sz=self.size, space=self.space, color=self.color
+        )
 
     @property
     def line(self):
@@ -642,11 +648,13 @@ class _Border(Parented):
             return
         self._cb.color = value
 
+
 class _CellBorders(Parented):
     """
     Sequence of |_Border| objects.
     Supports ``len()``, iteration, indexed access, and slicing.
     """
+
     def __init__(self, cell, parent):
         super(_CellBorders, self).__init__(parent)
         self._cell = cell
@@ -699,15 +707,17 @@ class _CellBorders(Parented):
         tcBorders = self._tcBorders
         if tcBorders is None:
             return None
-        remove_method = getattr(tcBorders, '_remove_%s' % border_name)
+        remove_method = getattr(tcBorders, "_remove_%s" % border_name)
         if remove_method:
             remove_method()
+
 
 class _TblBorders(Parented):
     """
     Sequence of |_Border| objects.
     Supports ``len()``, iteration, indexed access, and slicing.
     """
+
     def __init__(self, tbl, parent):
         super(_TblBorders, self).__init__(parent)
         self._tbl = tbl
@@ -758,6 +768,6 @@ class _TblBorders(Parented):
         tblBorders = self._tblBorders
         if tblBorders is None:
             return None
-        remove_method = getattr(tblBorders, '_remove_%s' % border_name)
+        remove_method = getattr(tblBorders, "_remove_%s" % border_name)
         if remove_method:
             remove_method()

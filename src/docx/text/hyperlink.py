@@ -34,9 +34,7 @@ class Hyperlink(Parented):
         self._parent = parent
         self._hyperlink = self._element = hyperlink
 
-    def add_run(
-        self, text: str | None = None, style: str | CharacterStyle | None = None
-    ) -> Run:
+    def add_run(self, text: str | None = None, style: str | CharacterStyle | None = None) -> Run:
         """Append a run containing `text` to this hyperlink, returning it.
 
         `text` follows the same tab/newline handling as `Paragraph.add_run`. When

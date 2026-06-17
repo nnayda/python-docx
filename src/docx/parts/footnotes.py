@@ -33,8 +33,6 @@ class FootnotesPart(StoryPart):
     @classmethod
     def _default_footnotes_xml(cls):
         """Return bytes containing XML for a default footnotes part."""
-        path = os.path.join(
-            os.path.split(__file__)[0], "..", "templates", "default-footnotes.xml"
-        )
+        path = os.path.join(os.path.split(__file__)[0], "..", "templates", "default-footnotes.xml")
         with open(path, "rb") as f:
             return f.read()

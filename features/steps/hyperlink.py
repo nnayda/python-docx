@@ -149,13 +149,9 @@ def then_the_saved_document_has_n_hyperlinks(context: Context, count: int):
     buffer.seek(0)
     context.reopened = Document(buffer)
     context.hyperlinks = [
-        hyperlink
-        for paragraph in context.reopened.paragraphs
-        for hyperlink in paragraph.hyperlinks
+        hyperlink for paragraph in context.reopened.paragraphs for hyperlink in paragraph.hyperlinks
     ]
-    assert len(context.hyperlinks) == count, "got %d hyperlinks" % len(
-        context.hyperlinks
-    )
+    assert len(context.hyperlinks) == count, "got %d hyperlinks" % len(context.hyperlinks)
 
 
 @then('hyperlink {idx:d} has text "{text}"')
@@ -171,8 +167,6 @@ def then_hyperlink_n_has_url(context: Context, idx: int, url: str):
 
 
 @then('the saved document defines the "{style_id}" character style')
-def then_the_saved_document_defines_the_character_style(
-    context: Context, style_id: str
-):
+def then_the_saved_document_defines_the_character_style(context: Context, style_id: str):
     styles = context.reopened.part._styles_part.element
     assert styles.get_by_id(style_id) is not None, "%r style not defined" % style_id

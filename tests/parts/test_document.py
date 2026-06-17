@@ -19,10 +19,10 @@ from docx.parts.hdrftr import FooterPart, HeaderPart
 from docx.parts.numbering import NumberingPart
 from docx.parts.settings import SettingsPart
 from docx.parts.styles import StylesPart
-from docx.text.footnote import Footnote
 from docx.settings import Settings
 from docx.styles.style import BaseStyle
 from docx.styles.styles import Styles
+from docx.text.footnote import Footnote
 
 from ..unitutil.cxml import element
 from ..unitutil.mock import (
@@ -461,10 +461,7 @@ class DescribeDocumentPart_footnotes:
         document_part._ensure_footnote_styles()
 
         styles = document_part.styles
-        assert (
-            styles.get_by_id("FootnoteText", WD_STYLE_TYPE.PARAGRAPH).style_id
-            == "FootnoteText"
-        )
+        assert styles.get_by_id("FootnoteText", WD_STYLE_TYPE.PARAGRAPH).style_id == "FootnoteText"
         assert (
             styles.get_by_id("FootnoteReference", WD_STYLE_TYPE.CHARACTER).style_id
             == "FootnoteReference"
@@ -500,10 +497,7 @@ class DescribeDocumentPart_hyperlinks:
         document_part._ensure_hyperlink_style()
 
         styles = document_part.styles
-        assert (
-            styles.get_by_id("Hyperlink", WD_STYLE_TYPE.CHARACTER).style_id
-            == "Hyperlink"
-        )
+        assert styles.get_by_id("Hyperlink", WD_STYLE_TYPE.CHARACTER).style_id == "Hyperlink"
 
     def it_does_not_duplicate_the_style_on_repeated_calls(self):
         document_part = Document().part

@@ -45,7 +45,10 @@ class CT_Footnotes(BaseOxmlElement):
 
 
 class CT_FtnEdn(BaseOxmlElement):
-    """`<w:footnote>` element, a single footnote (the same `CT_FtnEdn` complex type also backs the `<w:endnote>` element)."""
+    """`<w:footnote>` element, a single footnote.
+
+    The same `CT_FtnEdn` complex type also backs the `<w:endnote>` element.
+    """
 
     add_p: Callable[[], "CT_P"]
     p_lst: List["CT_P"]

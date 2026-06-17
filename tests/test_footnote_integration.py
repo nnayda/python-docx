@@ -23,9 +23,7 @@ class DescribeFootnoteRoundTrip:
         buffer.seek(0)
         reopened = Document(buffer)
 
-        footnotes_part = cast(
-            FootnotesPart, reopened.part.part_related_by(RT.FOOTNOTES)
-        )
+        footnotes_part = cast(FootnotesPart, reopened.part.part_related_by(RT.FOOTNOTES))
         footnotes = footnotes_part.element
         # -- two separators (-1, 0) plus two user footnotes (1, 2) --
         ids = [ftn.id for ftn in footnotes.footnote_lst]
