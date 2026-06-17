@@ -1,10 +1,28 @@
 /build/
 .coverage
+.coverage.*
+htmlcov/
 /dist/
 /docs/.build/
 /src/*.egg-info
 *.pyc
+__pycache__/
 .pytest_cache/
+.ruff_cache/
 _scratch/
 Session.vim
 /.tox/
+
+# Virtual environments
+.venv/
+.venv-*/
+venv/
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Local agent / working notes (not published)
+notes/

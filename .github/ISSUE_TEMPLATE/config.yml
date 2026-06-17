@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/nnayda/python-docx/security/advisories/new
+    about: Please report security issues privately — never as a public issue.
+  - name: Upstream python-docx
+    url: https://github.com/python-openxml/python-docx
+    about: For issues that aren't specific to this fork, consider upstream too.

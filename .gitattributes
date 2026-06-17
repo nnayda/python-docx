@@ -1,0 +1,17 @@
+# Normalize all text files to LF in the repository and on checkout so every
+# contributor and CI runner produces the same bytes.
+* text=auto eol=lf
+
+# Binary fixtures and assets — never diff or normalize.
+*.docx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.emf binary
+*.tiff binary
+*.xlsx binary
+
+# Machine-generated lockfile: hide by default in PR diffs.
+uv.lock linguist-generated

@@ -1,0 +1,65 @@
+name: Release
+
+# Builds the sdist + wheel when a GitHub Release is published and uploads them
+# to PyPI via Trusted Publishing (OIDC — no API token stored in the repo).
+#
+# One-time setup before the first release:
+#   1. Create the project on PyPI (or use a pending publisher) and add this
+#      repository as a trusted publisher:
+#        https://docs.pypi.org/trusted-publishers/
+#        - Owner: nnayda
+#        - Repository: python-docx
+#        - Workflow: release.yml
+#        - Environment: pypi
+#   2. Create a GitHub environment named "pypi".
+#   3. Bump __version__ in src/docx/__init__.py, then publish a GitHub Release
+#      with the matching tag (e.g. v1.2.0).
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Check distributions
+        run: uvx twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/python-docx-nnayda
+    permissions:
+      id-token: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1

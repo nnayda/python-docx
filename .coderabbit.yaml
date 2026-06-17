@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
+language: "en-US"
+
+reviews:
+  profile: "chill"
+  high_level_summary: true
+  poem: false
+  auto_review:
+    enabled: true
+  path_filters:
+    - "!**/uv.lock"
+    - "!features/steps/test_files/**"
+    - "!tests/test_files/**"
+    - "!docs/.build/**"
+  path_instructions:
+    - path: "src/docx/oxml/**"
+      instructions: |
+        This is the object layer: lxml-backed classes that map 1:1 to
+        WordprocessingML XML elements. This is the ONLY place that should know
+        about XML namespaces and element structure. Flag any raw XML string
+        construction or namespace handling that belongs here but leaks
+        elsewhere.
+    - path: "src/docx/**"
+      instructions: |
+        ruff (lint + format) and pyright (strict) already run in CI — skip
+        style nits and obvious type issues; focus on logic, API design, and
+        correctness against the OOXML spec. Code above the oxml layer should
+        manipulate custom element objects, never reach into lxml or hardcode
+        XML/namespaces directly.
+    - path: "tests/**"
+      instructions: |
+        pytest unit tests. Tests use the project's BDD-style naming
+        (it_/its_/they_/and_/but_ functions, Describe classes). Skip style
+        nits; focus on whether the test actually exercises the described
+        behavior.
+    - path: "features/**"
+      instructions: |
+        behave acceptance tests. Focus on whether the scenario reflects real
+        user-facing behavior.
