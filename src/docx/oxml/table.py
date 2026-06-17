@@ -379,14 +379,8 @@ class CT_TblPr(BaseOxmlElement):
 
     @autofit.setter
     def autofit(self, value: bool):
-        if value:
-            self._remove_tblLayout()
-            tblW = self.get_or_add_tblW()
-            tblW.autofit = True
-        else:
-            self._remove_tblW()
-            tblLayout = self.get_or_add_tblLayout()
-            tblLayout.type = "fixed"
+        tblLayout = self.get_or_add_tblLayout()
+        tblLayout.type = "autofit" if value else "fixed"
 
     @property
     def style(self):
