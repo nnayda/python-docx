@@ -4,11 +4,13 @@ from typing import cast
 
 import pytest
 
+from docx import Document
 from docx import types as t
 from docx.opc.rel import _Relationship  # pyright: ignore[reportPrivateUsage]
 from docx.oxml.text.hyperlink import CT_Hyperlink
 from docx.parts.story import StoryPart
 from docx.text.hyperlink import Hyperlink
+from docx.text.run import Run
 
 from ..unitutil.cxml import element
 from ..unitutil.mock import FixtureRequest, Mock, instance_mock
@@ -128,6 +130,38 @@ class DescribeHyperlink:
         hyperlink = Hyperlink(hlink, fake_parent)
 
         assert hyperlink.url == expected_value
+
+    def it_can_add_a_run_carrying_the_built_in_Hyperlink_style(self):
+        hyperlink = self._empty_hyperlink()
+
+        run = hyperlink.add_run("click here")
+
+        assert isinstance(run, Run)
+        assert run.text == "click here"
+        assert run._r.style == "Hyperlink"  # pyright: ignore[reportPrivateUsage]
+        assert [r.text for r in hyperlink.runs] == ["click here"]
+
+    def it_can_add_an_empty_run(self):
+        hyperlink = self._empty_hyperlink()
+
+        run = hyperlink.add_run()
+
+        assert run.text == ""
+        assert run._r.style == "Hyperlink"  # pyright: ignore[reportPrivateUsage]
+
+    def it_can_add_a_run_with_an_overriding_style(self):
+        hyperlink = self._empty_hyperlink()
+
+        run = hyperlink.add_run("bold link", style="Strong")
+
+        assert run._r.style == "Strong"  # pyright: ignore[reportPrivateUsage]
+
+    @staticmethod
+    def _empty_hyperlink() -> Hyperlink:
+        """Return a |Hyperlink| whose part is a real (blank) document part."""
+        paragraph = Document().add_paragraph()
+        hlink = cast(CT_Hyperlink, element("w:hyperlink{r:id=rId6}"))
+        return Hyperlink(hlink, paragraph)
 
     # -- fixtures --------------------------------------------------------------------
 

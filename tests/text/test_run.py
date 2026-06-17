@@ -403,3 +403,44 @@ class DescribeRun:
     @pytest.fixture
     def Text_(self, request):
         return class_mock(request, "docx.text.run._Text")
+
+
+class DescribeRun_add_footnote:
+    """Unit-test suite for Run.add_footnote."""
+
+    def it_inserts_a_reference_marker_immediately_after_the_run(self):
+        from docx import Document
+
+        document = Document()
+        paragraph = document.add_paragraph()
+        run = paragraph.add_run("anchor")
+        paragraph.add_run("after")
+
+        footnote = run.add_footnote("the note")
+
+        runs = paragraph._p.r_lst
+        marker = runs[1]
+        assert marker.footnoteReference_lst[0].id == footnote.id
+        assert marker.style == "FootnoteReference"
+        assert runs[2].text == "after"
+
+    def it_returns_a_footnote_carrying_the_text(self):
+        from docx import Document
+
+        run = Document().add_paragraph().add_run("anchor")
+
+        footnote = run.add_footnote("the note")
+
+        assert footnote.text == "the note"
+        assert footnote.id == 1
+
+    def it_returns_an_empty_footnote_when_no_text_is_given(self):
+        from docx import Document
+
+        run = Document().add_paragraph().add_run("anchor")
+
+        footnote = run.add_footnote()
+
+        # -- marker is still inserted and linked, but the note body is empty --
+        assert run._r.getnext().footnoteReference_lst[0].id == footnote.id
+        assert footnote.text == ""

@@ -7,12 +7,18 @@ of in-between, less than a paragraph and more than a run. So it gets its own mod
 
 from __future__ import annotations
 
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from docx import types as t
 from docx.oxml.text.hyperlink import CT_Hyperlink
 from docx.shared import Parented
 from docx.text.run import Run
+
+if TYPE_CHECKING:
+    from docx.styles.style import CharacterStyle
+
+#: Style id of the built-in character style applied to hyperlink runs by default.
+HYPERLINK_STYLE_ID = "Hyperlink"
 
 
 class Hyperlink(Parented):
@@ -27,6 +33,23 @@ class Hyperlink(Parented):
         super().__init__(parent)
         self._parent = parent
         self._hyperlink = self._element = hyperlink
+
+    def add_run(
+        self, text: str | None = None, style: str | CharacterStyle | None = None
+    ) -> Run:
+        """Append a run containing `text` to this hyperlink, returning it.
+
+        `text` follows the same tab/newline handling as `Paragraph.add_run`. When
+        `style` is |None| the built-in "Hyperlink" character style is applied so the run
+        renders like a hyperlink; pass an explicit `style` to override. The "Hyperlink"
+        style is injected into the document's styles part if not already present.
+        """
+        self.part.ensure_hyperlink_style()
+        run = Run(self._hyperlink.add_r(), self._parent)
+        if text:
+            run.text = text
+        run.style = style if style is not None else HYPERLINK_STYLE_ID
+        return run
 
     @property
     def address(self) -> str:

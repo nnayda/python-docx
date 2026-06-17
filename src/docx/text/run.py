@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from docx.enum.text import WD_UNDERLINE
     from docx.oxml.text.run import CT_R, CT_Text
     from docx.shared import Length
+    from docx.text.footnote import Footnote
 
 
 class Run(StoryChild):
@@ -94,6 +95,19 @@ class Run(StoryChild):
         """
         t = self._r.add_t(text)
         return _Text(t)
+
+    def add_footnote(self, text: str | None = None) -> "Footnote":
+        """Add a footnote whose reference marker is inserted immediately after this run.
+
+        When `text` is a string the note contains that text; when |None| the returned
+        |Footnote| starts empty for the caller to build via `add_paragraph`/`add_run`.
+        """
+        # -- imported lazily to avoid a footnote<->paragraph<->run import cycle --
+        from docx.text.footnote import new_footnote_reference_run
+
+        footnote = self.part.add_footnote(text)
+        self._r.addnext(new_footnote_reference_run(footnote.id))
+        return footnote
 
     @property
     def bold(self) -> bool | None:

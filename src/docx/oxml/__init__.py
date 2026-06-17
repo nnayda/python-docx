@@ -93,6 +93,15 @@ from .document import CT_Body, CT_Document  # noqa
 register_element_cls("w:body", CT_Body)
 register_element_cls("w:document", CT_Document)
 
+from .footnotes import CT_Empty, CT_Footnotes, CT_FtnEdn, CT_FtnEdnRef  # noqa
+
+register_element_cls("w:continuationSeparator", CT_Empty)
+register_element_cls("w:footnote", CT_FtnEdn)
+register_element_cls("w:footnoteRef", CT_Empty)
+register_element_cls("w:footnoteReference", CT_FtnEdnRef)
+register_element_cls("w:footnotes", CT_Footnotes)
+register_element_cls("w:separator", CT_Empty)
+
 from .numbering import CT_Num, CT_Numbering, CT_NumLvl, CT_NumPr  # noqa
 
 register_element_cls("w:abstractNumId", CT_DecimalNumber)
@@ -150,11 +159,15 @@ from .table import (  # noqa
     CT_TblLayoutType,
     CT_TblPr,
     CT_TblWidth,
+    CT_TcColor,
     CT_Tc,
     CT_TcPr,
     CT_TrPr,
     CT_VMerge,
     CT_VerticalJc,
+    CT_Border,
+    CT_TcBorders,
+    CT_TblBorders,
 )
 
 register_element_cls("w:bidiVisual", CT_OnOff)
@@ -168,11 +181,26 @@ register_element_cls("w:tblStyle", CT_String)
 register_element_cls("w:tc", CT_Tc)
 register_element_cls("w:tcPr", CT_TcPr)
 register_element_cls("w:tcW", CT_TblWidth)
+register_element_cls("w:tblW", CT_TblWidth)
 register_element_cls("w:tr", CT_Row)
 register_element_cls("w:trHeight", CT_Height)
 register_element_cls("w:trPr", CT_TrPr)
+register_element_cls('w:cantSplit', CT_OnOff)
 register_element_cls("w:vAlign", CT_VerticalJc)
 register_element_cls("w:vMerge", CT_VMerge)
+register_element_cls("w:shd", CT_TcColor)
+register_element_cls('w:tblBorders', CT_TblBorders)
+register_element_cls('w:tcBorders',  CT_TcBorders)
+register_element_cls('w:top',        CT_Border)
+register_element_cls('w:start',      CT_Border)
+register_element_cls('w:left',       CT_Border)
+register_element_cls('w:bottom',     CT_Border)
+register_element_cls('w:end',        CT_Border)
+register_element_cls('w:right',      CT_Border)
+register_element_cls('w:insideH',    CT_Border)
+register_element_cls('w:insideV',    CT_Border)
+register_element_cls('w:tl2br',      CT_Border)
+register_element_cls('w:tr2bl',      CT_Border)
 
 from .text.font import (  # noqa
     CT_Color,

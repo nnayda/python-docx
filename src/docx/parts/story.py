@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from docx.image.image import Image
     from docx.parts.document import DocumentPart
     from docx.styles.style import BaseStyle
+    from docx.text.footnote import Footnote
 
 
 class StoryPart(XmlPart):
@@ -37,6 +38,22 @@ class StoryPart(XmlPart):
         image_part = package.get_or_add_image_part(image_descriptor)
         rId = self.relate_to(image_part, RT.IMAGE)
         return rId, image_part.image
+
+    def add_footnote(self, text: str | None = None) -> Footnote:
+        """Add a footnote to the document and return it.
+
+        Delegates to the main document part, which owns the footnotes part.
+        """
+        return self._document_part.add_footnote(text)
+
+    def ensure_hyperlink_style(self) -> None:
+        """Ensure the built-in `Hyperlink` character style exists in the document.
+
+        Delegates to the main document part, which owns the styles part. Available from
+        body, header, and footer story parts so each can apply the style to hyperlink
+        runs it creates.
+        """
+        self._document_part._ensure_hyperlink_style()
 
     def get_style(self, style_id: str | None, style_type: WD_STYLE_TYPE) -> BaseStyle:
         """Return the style in this document matching `style_id`.
