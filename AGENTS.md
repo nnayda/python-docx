@@ -60,7 +60,7 @@ the wrong direction.
   `src/docx/__init__.py`; `pyproject.toml` reads it dynamically. Bump it there.
 - **Commits/PRs:** PR titles follow [Conventional Commits](https://www.conventionalcommits.org/)
   (CI-enforced). PRs are **squash-merged**, so the PR title becomes the commit
-  message on `master`. Keep one logical change per PR.
+  message on `main`. Keep one logical change per PR.
 - **Style:** `ruff` is the arbiter for both lint and formatting — no manual
   style debates. `pyright` runs in strict mode; keep it green.
 - **Tests:** add or update unit tests (`tests/`) for changed behavior; add a

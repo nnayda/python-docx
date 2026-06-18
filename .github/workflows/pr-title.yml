@@ -1,6 +1,6 @@
 name: PR title
 
-# PRs are squash-merged, so the PR title becomes the commit message on master.
+# PRs are squash-merged, so the PR title becomes the commit message on main.
 # This enforces the Conventional Commits format promised in CONTRIBUTING.md.
 on:
   pull_request:

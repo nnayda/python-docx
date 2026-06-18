@@ -4,7 +4,7 @@ name: CodeQL
 # Security → Code scanning.
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
   schedule:
     # Weekly sweep so new CodeQL queries run even when the code hasn't changed.
@@ -15,7 +15,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   analyze:

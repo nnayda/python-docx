@@ -1,11 +1,11 @@
 name: Docs
 
 # Builds the Sphinx documentation on every push/PR and publishes it to
-# GitHub Pages from master. Enable Pages with "GitHub Actions" as the source
+# GitHub Pages from main. Enable Pages with "GitHub Actions" as the source
 # in repository Settings → Pages.
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
 
 permissions:
@@ -36,14 +36,14 @@ jobs:
             sphinx-build -b html --keep-going docs docs/.build/html
 
       - name: Upload Pages artifact
-        if: github.ref == 'refs/heads/master'
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/.build/html
 
   deploy:
     name: Deploy to GitHub Pages
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:
