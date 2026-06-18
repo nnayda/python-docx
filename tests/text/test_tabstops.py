@@ -1,40 +1,55 @@
+# pyright: reportPrivateUsage=false
+
 """Test suite for the docx.text.tabstops module."""
+
+from __future__ import annotations
+
+from typing import Any, cast
 
 import pytest
 
 from docx.enum.text import WD_TAB_ALIGNMENT, WD_TAB_LEADER
-from docx.shared import Twips
+from docx.oxml.text.parfmt import CT_PPr, CT_TabStop, CT_TabStops
+from docx.shared import Length, Twips
 from docx.text.tabstops import TabStop, TabStops
 
 from ..unitutil.cxml import element, xml
-from ..unitutil.mock import call, class_mock, instance_mock
+from ..unitutil.mock import FixtureRequest, Mock, call, class_mock, instance_mock
 
 
 class DescribeTabStop:
-    def it_knows_its_position(self, position_get_fixture):
+    def it_knows_its_position(self, position_get_fixture: tuple[TabStop, Length]) -> None:
         tab_stop, expected_value = position_get_fixture
         assert tab_stop.position == expected_value
 
-    def it_can_change_its_position(self, position_set_fixture):
+    def it_can_change_its_position(
+        self, position_set_fixture: tuple[TabStop, Length, CT_TabStops, int, str]
+    ) -> None:
         tab_stop, value, tabs, new_idx, expected_xml = position_set_fixture
         tab_stop.position = value
         assert tab_stop._tab is tabs[new_idx]
         assert tabs.xml == expected_xml
 
-    def it_knows_its_alignment(self, alignment_get_fixture):
+    def it_knows_its_alignment(
+        self, alignment_get_fixture: tuple[TabStop, WD_TAB_ALIGNMENT]
+    ) -> None:
         tab_stop, expected_value = alignment_get_fixture
         assert tab_stop.alignment == expected_value
 
-    def it_can_change_its_alignment(self, alignment_set_fixture):
+    def it_can_change_its_alignment(
+        self, alignment_set_fixture: tuple[TabStop, WD_TAB_ALIGNMENT, str]
+    ) -> None:
         tab_stop, value, expected_xml = alignment_set_fixture
         tab_stop.alignment = value
         assert tab_stop._element.xml == expected_xml
 
-    def it_knows_its_leader(self, leader_get_fixture):
+    def it_knows_its_leader(self, leader_get_fixture: tuple[TabStop, WD_TAB_LEADER]) -> None:
         tab_stop, expected_value = leader_get_fixture
         assert tab_stop.leader == expected_value
 
-    def it_can_change_its_leader(self, leader_set_fixture):
+    def it_can_change_its_leader(
+        self, leader_set_fixture: tuple[TabStop, WD_TAB_LEADER | None, str]
+    ) -> None:
         tab_stop, value, expected_xml = leader_set_fixture
         tab_stop.leader = value
         assert tab_stop._element.xml == expected_xml
@@ -47,9 +62,9 @@ class DescribeTabStop:
             ("w:tab{w:val=right}", "RIGHT"),
         ]
     )
-    def alignment_get_fixture(self, request):
-        tab_stop_cxml, member = request.param
-        tab_stop = TabStop(element(tab_stop_cxml))
+    def alignment_get_fixture(self, request: FixtureRequest) -> tuple[TabStop, WD_TAB_ALIGNMENT]:
+        tab_stop_cxml, member = cast("tuple[str, str]", request.param)
+        tab_stop = TabStop(cast(CT_TabStop, element(tab_stop_cxml)))
         expected_value = getattr(WD_TAB_ALIGNMENT, member)
         return tab_stop, expected_value
 
@@ -59,9 +74,11 @@ class DescribeTabStop:
             ("w:tab{w:val=right}", "LEFT", "w:tab{w:val=left}"),
         ]
     )
-    def alignment_set_fixture(self, request):
-        tab_stop_cxml, member, expected_cxml = request.param
-        tab_stop = TabStop(element(tab_stop_cxml))
+    def alignment_set_fixture(
+        self, request: FixtureRequest
+    ) -> tuple[TabStop, WD_TAB_ALIGNMENT, str]:
+        tab_stop_cxml, member, expected_cxml = cast("tuple[str, str, str]", request.param)
+        tab_stop = TabStop(cast(CT_TabStop, element(tab_stop_cxml)))
         expected_xml = xml(expected_cxml)
         value = getattr(WD_TAB_ALIGNMENT, member)
         return tab_stop, value, expected_xml
@@ -73,9 +90,9 @@ class DescribeTabStop:
             ("w:tab{w:leader=dot}", "DOTS"),
         ]
     )
-    def leader_get_fixture(self, request):
-        tab_stop_cxml, member = request.param
-        tab_stop = TabStop(element(tab_stop_cxml))
+    def leader_get_fixture(self, request: FixtureRequest) -> tuple[TabStop, WD_TAB_LEADER]:
+        tab_stop_cxml, member = cast("tuple[str, str]", request.param)
+        tab_stop = TabStop(cast(CT_TabStop, element(tab_stop_cxml)))
         expected_value = getattr(WD_TAB_LEADER, member)
         return tab_stop, expected_value
 
@@ -89,16 +106,18 @@ class DescribeTabStop:
             ("w:tab", None, "w:tab"),
         ]
     )
-    def leader_set_fixture(self, request):
-        tab_stop_cxml, new_value, expected_cxml = request.param
-        tab_stop = TabStop(element(tab_stop_cxml))
+    def leader_set_fixture(
+        self, request: FixtureRequest
+    ) -> tuple[TabStop, WD_TAB_LEADER | None, str]:
+        tab_stop_cxml, new_value, expected_cxml = cast("tuple[str, str | None, str]", request.param)
+        tab_stop = TabStop(cast(CT_TabStop, element(tab_stop_cxml)))
         value = None if new_value is None else getattr(WD_TAB_LEADER, new_value)
         expected_xml = xml(expected_cxml)
         return tab_stop, value, expected_xml
 
     @pytest.fixture
-    def position_get_fixture(self, request):
-        tab_stop = TabStop(element("w:tab{w:pos=720}"))
+    def position_get_fixture(self, request: FixtureRequest) -> tuple[TabStop, Length]:
+        tab_stop = TabStop(cast(CT_TabStop, element("w:tab{w:pos=720}")))
         return tab_stop, Twips(720)
 
     @pytest.fixture(
@@ -135,9 +154,13 @@ class DescribeTabStop:
             ),
         ]
     )
-    def position_set_fixture(self, request):
-        tabs_cxml, value, new_idx, expected_cxml = request.param
-        tabs = element(tabs_cxml)
+    def position_set_fixture(
+        self, request: FixtureRequest
+    ) -> tuple[TabStop, Length, CT_TabStops, int, str]:
+        tabs_cxml, value, new_idx, expected_cxml = cast(
+            "tuple[str, Length, int, str]", request.param
+        )
+        tabs = cast(CT_TabStops, element(tabs_cxml))
         tab = tabs.tab_lst[0]
         tab_stop = TabStop(tab)
         expected_xml = xml(expected_cxml)
@@ -145,11 +168,13 @@ class DescribeTabStop:
 
 
 class DescribeTabStops:
-    def it_knows_its_length(self, len_fixture):
+    def it_knows_its_length(self, len_fixture: tuple[TabStops, int]) -> None:
         tab_stops, expected_value = len_fixture
         assert len(tab_stops) == expected_value
 
-    def it_can_iterate_over_its_tab_stops(self, iter_fixture):
+    def it_can_iterate_over_its_tab_stops(
+        self, iter_fixture: tuple[TabStops, int, Mock, Mock, list[Any]]
+    ) -> None:
         tab_stops, expected_count, tab_stop_, TabStop_, expected_calls = iter_fixture
         count = 0
         for tab_stop in tab_stops:
@@ -158,34 +183,38 @@ class DescribeTabStops:
         assert count == expected_count
         assert TabStop_.call_args_list == expected_calls
 
-    def it_can_get_a_tab_stop_by_index(self, index_fixture):
+    def it_can_get_a_tab_stop_by_index(
+        self, index_fixture: tuple[TabStops, int, Mock, CT_TabStop, Mock]
+    ) -> None:
         tab_stops, idx, TabStop_, tab, tab_stop_ = index_fixture
         tab_stop = tab_stops[idx]
         TabStop_.assert_called_once_with(tab)
         assert tab_stop is tab_stop_
 
-    def it_raises_on_indexed_access_when_empty(self):
-        tab_stops = TabStops(element("w:pPr"))
+    def it_raises_on_indexed_access_when_empty(self) -> None:
+        tab_stops = TabStops(cast(CT_PPr, element("w:pPr")))
         with pytest.raises(IndexError):
             tab_stops[0]
 
-    def it_can_add_a_tab_stop(self, add_tab_fixture):
+    def it_can_add_a_tab_stop(
+        self, add_tab_fixture: tuple[TabStops, Length, dict[str, Any], str]
+    ) -> None:
         tab_stops, position, kwargs, expected_xml = add_tab_fixture
         tab_stops.add_tab_stop(position, **kwargs)
         assert tab_stops._element.xml == expected_xml
 
-    def it_can_delete_a_tab_stop(self, del_fixture):
+    def it_can_delete_a_tab_stop(self, del_fixture: tuple[TabStops, int, str]) -> None:
         tab_stops, idx, expected_xml = del_fixture
         del tab_stops[idx]
         assert tab_stops._element.xml == expected_xml
 
-    def it_raises_on_del_idx_invalid(self, del_raises_fixture):
+    def it_raises_on_del_idx_invalid(self, del_raises_fixture: tuple[TabStops, int]) -> None:
         tab_stops, idx = del_raises_fixture
         with pytest.raises(IndexError) as exc:
             del tab_stops[idx]
         assert exc.value.args[0] == "tab index out of range"
 
-    def it_can_clear_all_its_tab_stops(self, clear_all_fixture):
+    def it_can_clear_all_its_tab_stops(self, clear_all_fixture: tuple[TabStops, str]) -> None:
         tab_stops, expected_xml = clear_all_fixture
         tab_stops.clear_all()
         assert tab_stops._element.xml == expected_xml
@@ -199,9 +228,9 @@ class DescribeTabStops:
             "w:pPr/w:tabs/(w:tab{w:pos=24},w:tab{w:pos=42})",
         ]
     )
-    def clear_all_fixture(self, request):
-        pPr_cxml = request.param
-        tab_stops = TabStops(element(pPr_cxml))
+    def clear_all_fixture(self, request: FixtureRequest) -> tuple[TabStops, str]:
+        pPr_cxml = cast(str, request.param)
+        tab_stops = TabStops(cast(CT_PPr, element(pPr_cxml)))
         expected_xml = xml("w:pPr")
         return tab_stops, expected_xml
 
@@ -220,9 +249,9 @@ class DescribeTabStops:
             ),
         ]
     )
-    def del_fixture(self, request):
-        pPr_cxml, idx, expected_cxml = request.param
-        tab_stops = TabStops(element(pPr_cxml))
+    def del_fixture(self, request: FixtureRequest) -> tuple[TabStops, int, str]:
+        pPr_cxml, idx, expected_cxml = cast("tuple[str, int, str]", request.param)
+        tab_stops = TabStops(cast(CT_PPr, element(pPr_cxml)))
         expected_xml = xml(expected_cxml)
         return tab_stops, idx, expected_xml
 
@@ -232,14 +261,19 @@ class DescribeTabStops:
             ("w:pPr/w:tabs/w:tab{w:pos=42}", 1),
         ]
     )
-    def del_raises_fixture(self, request):
-        tab_stops_cxml, idx = request.param
-        tab_stops = TabStops(element(tab_stops_cxml))
+    def del_raises_fixture(self, request: FixtureRequest) -> tuple[TabStops, int]:
+        tab_stops_cxml, idx = cast("tuple[str, int]", request.param)
+        tab_stops = TabStops(cast(CT_PPr, element(tab_stops_cxml)))
         return tab_stops, idx
 
     @pytest.fixture(
         params=[
-            ("w:pPr", Twips(42), {}, "w:pPr/w:tabs/w:tab{w:pos=42,w:val=left}"),
+            (
+                "w:pPr",
+                Twips(42),
+                cast("dict[str, Any]", {}),
+                "w:pPr/w:tabs/w:tab{w:pos=42,w:val=left}",
+            ),
             (
                 "w:pPr",
                 Twips(72),
@@ -255,26 +289,30 @@ class DescribeTabStops:
             (
                 "w:pPr/w:tabs/w:tab{w:pos=42}",
                 Twips(72),
-                {},
+                cast("dict[str, Any]", {}),
                 "w:pPr/w:tabs/(w:tab{w:pos=42},w:tab{w:pos=72,w:val=left})",
             ),
             (
                 "w:pPr/w:tabs/w:tab{w:pos=42}",
                 Twips(24),
-                {},
+                cast("dict[str, Any]", {}),
                 "w:pPr/w:tabs/(w:tab{w:pos=24,w:val=left},w:tab{w:pos=42})",
             ),
             (
                 "w:pPr/w:tabs/w:tab{w:pos=42}",
                 Twips(42),
-                {},
+                cast("dict[str, Any]", {}),
                 "w:pPr/w:tabs/(w:tab{w:pos=42},w:tab{w:pos=42,w:val=left})",
             ),
         ]
     )
-    def add_tab_fixture(self, request):
-        pPr_cxml, position, kwargs, expected_cxml = request.param
-        tab_stops = TabStops(element(pPr_cxml))
+    def add_tab_fixture(
+        self, request: FixtureRequest
+    ) -> tuple[TabStops, Length, dict[str, Any], str]:
+        pPr_cxml, position, kwargs, expected_cxml = cast(
+            "tuple[str, Length, dict[str, Any], str]", request.param
+        )
+        tab_stops = TabStops(cast(CT_PPr, element(pPr_cxml)))
         expected_xml = xml(expected_cxml)
         return tab_stops, position, kwargs, expected_xml
 
@@ -285,10 +323,12 @@ class DescribeTabStops:
             ("w:pPr/w:tabs/(w:tab{w:pos=4},w:tab{w:pos=5},w:tab{w:pos=6})", 2),
         ]
     )
-    def index_fixture(self, request, TabStop_, tab_stop_):
-        pPr_cxml, idx = request.param
-        pPr = element(pPr_cxml)
-        tab = pPr.xpath("./w:tabs/w:tab")[idx]
+    def index_fixture(
+        self, request: FixtureRequest, TabStop_: Mock, tab_stop_: Mock
+    ) -> tuple[TabStops, int, Mock, CT_TabStop, Mock]:
+        pPr_cxml, idx = cast("tuple[str, int]", request.param)
+        pPr = cast(CT_PPr, element(pPr_cxml))
+        tab = cast("list[CT_TabStop]", pPr.xpath("./w:tabs/w:tab"))[idx]
         tab_stops = TabStops(pPr)
         return tab_stops, idx, TabStop_, tab, tab_stop_
 
@@ -299,10 +339,12 @@ class DescribeTabStops:
             ("w:pPr/w:tabs/(w:tab{w:pos=2880},w:tab{w:pos=5760})", 2),
         ]
     )
-    def iter_fixture(self, request, TabStop_, tab_stop_):
-        pPr_cxml, expected_count = request.param
-        pPr = element(pPr_cxml)
-        tab_elms = pPr.xpath("//w:tab")
+    def iter_fixture(
+        self, request: FixtureRequest, TabStop_: Mock, tab_stop_: Mock
+    ) -> tuple[TabStops, int, Mock, Mock, list[Any]]:
+        pPr_cxml, expected_count = cast("tuple[str, int]", request.param)
+        pPr = cast(CT_PPr, element(pPr_cxml))
+        tab_elms = cast("list[CT_TabStop]", pPr.xpath("//w:tab"))
         tab_stops = TabStops(pPr)
         expected_calls = [call(tab) for tab in tab_elms]
         return tab_stops, expected_count, tab_stop_, TabStop_, expected_calls
@@ -313,17 +355,17 @@ class DescribeTabStops:
             ("w:pPr/w:tabs/w:tab{w:pos=2880}", 1),
         ]
     )
-    def len_fixture(self, request):
-        tab_stops_cxml, expected_value = request.param
-        tab_stops = TabStops(element(tab_stops_cxml))
+    def len_fixture(self, request: FixtureRequest) -> tuple[TabStops, int]:
+        tab_stops_cxml, expected_value = cast("tuple[str, int]", request.param)
+        tab_stops = TabStops(cast(CT_PPr, element(tab_stops_cxml)))
         return tab_stops, expected_value
 
     # fixture components ---------------------------------------------
 
     @pytest.fixture
-    def TabStop_(self, request, tab_stop_):
+    def TabStop_(self, request: FixtureRequest, tab_stop_: Mock) -> Mock:
         return class_mock(request, "docx.text.tabstops.TabStop", return_value=tab_stop_)
 
     @pytest.fixture
-    def tab_stop_(self, request):
+    def tab_stop_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, TabStop)

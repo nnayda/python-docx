@@ -23,7 +23,7 @@ class Styles(ElementProxy):
         super().__init__(styles)
         self._element = styles
 
-    def __contains__(self, name):
+    def __contains__(self, name: str) -> bool:
         """Enables `in` operator on style name."""
         internal_name = BabelFish.ui2internal(name)
         return any(style.name_val == internal_name for style in self._element.style_lst)
@@ -52,7 +52,7 @@ class Styles(ElementProxy):
     def __len__(self):
         return len(self._element.style_lst)
 
-    def add_style(self, name, style_type, builtin=False):
+    def add_style(self, name: str, style_type: WD_STYLE_TYPE, builtin: bool = False) -> BaseStyle:
         """Return a newly added style object of `style_type` and identified by `name`.
 
         A builtin style can be defined by passing True for the optional `builtin`
@@ -72,17 +72,23 @@ class Styles(ElementProxy):
             return None
         return StyleFactory(style)
 
-    def get_by_id(self, style_id: str | None, style_type: WD_STYLE_TYPE):
+    def get_by_id(self, style_id: str | None, style_type: WD_STYLE_TYPE) -> BaseStyle:
         """Return the style of `style_type` matching `style_id`.
 
         Returns the default for `style_type` if `style_id` is not found or is |None|, or
         if the style having `style_id` is not of `style_type`.
         """
-        if style_id is None:
-            return self.default(style_type)
-        return self._get_by_id(style_id, style_type)
+        style = (
+            self.default(style_type) if style_id is None else self._get_by_id(style_id, style_type)
+        )
+        # -- a document always defines a default style for each style type, so the
+        # -- fall-back path always resolves to a concrete style. --
+        assert style is not None
+        return style
 
-    def get_style_id(self, style_or_name, style_type):
+    def get_style_id(
+        self, style_or_name: BaseStyle | str | None, style_type: WD_STYLE_TYPE
+    ) -> str | None:
         """Return the id of the style corresponding to `style_or_name`, or |None| if
         `style_or_name` is |None|.
 
@@ -98,7 +104,7 @@ class Styles(ElementProxy):
             return self._get_style_id_from_name(style_or_name, style_type)
 
     @property
-    def latent_styles(self):
+    def latent_styles(self) -> LatentStyles:
         """A |LatentStyles| object providing access to the default behaviors for latent
         styles and the collection of |_LatentStyle| objects that define overrides of
         those defaults for a particular named latent style."""

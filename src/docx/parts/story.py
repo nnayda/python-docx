@@ -53,7 +53,7 @@ class StoryPart(XmlPart):
         body, header, and footer story parts so each can apply the style to hyperlink
         runs it creates.
         """
-        self._document_part._ensure_hyperlink_style()
+        self._document_part._ensure_hyperlink_style()  # pyright: ignore[reportPrivateUsage]
 
     def get_style(self, style_id: str | None, style_type: WD_STYLE_TYPE) -> BaseStyle:
         """Return the style in this document matching `style_id`.

@@ -4,12 +4,19 @@ CXEL is a compact XML specification language I made up that's useful for produci
 element trees suitable for unit testing.
 """
 
+from __future__ import annotations
+
+from typing import Any, Iterable, List, Tuple, cast
+from typing import Optional as OptionalType
+
 from pyparsing import (
     Combine,
     Forward,
     Group,
     Literal,
     Optional,
+    ParserElement,
+    ParseResults,
     Suppress,
     Word,
     alphanums,
@@ -22,13 +29,14 @@ from pyparsing import (
 
 from docx.oxml.ns import nsmap
 from docx.oxml.parser import parse_xml
+from docx.oxml.xmlchemy import BaseOxmlElement
 
 # ====================================================================
 # api functions
 # ====================================================================
 
 
-def element(cxel_str: str):
+def element(cxel_str: str) -> BaseOxmlElement:
     """Return an oxml element parsed from the XML generated from `cxel_str`."""
     _xml = xml(cxel_str)
     return parse_xml(_xml)
@@ -37,7 +45,7 @@ def element(cxel_str: str):
 def xml(cxel_str: str) -> str:
     """Return the XML generated from `cxel_str`."""
     root_token = root_node.parseString(cxel_str)
-    xml = root_token.element.xml
+    xml = cast("Element", cast(Any, root_token).element).xml
     return xml
 
 
@@ -46,7 +54,7 @@ def xml(cxel_str: str) -> str:
 # ====================================================================
 
 
-def nsdecls(*nspfxs):
+def nsdecls(*nspfxs: str) -> str:
     """Namespace-declaration including each of `nspfxs`, in the order specified."""
     nsdecls = ""
     for nspfx in nspfxs:
@@ -60,41 +68,42 @@ class Element:
     may contain either text or children (but not both) or may be empty.
     """
 
-    def __init__(self, tagname, attrs, text):
+    def __init__(self, tagname: str, attrs: List[Tuple[str, str]], text: str) -> None:
         self._tagname = tagname
         self._attrs = attrs
         self._text = text
-        self._children = []
+        self._children: List[Element] = []
         self._is_root = False
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Provide a more meaningful repr value for an Element object, one that
         displays the tagname as a simple empty element, e.g. ``<w:pPr/>``.
         """
         return "<%s/>" % self._tagname
 
-    def connect_children(self, child_node_list):
+    def connect_children(self, child_node_list: Iterable[Any]) -> None:
         """
         Make each of the elements appearing in `child_node_list` a child of
         this element.
         """
         for node in child_node_list:
-            child = node.element
+            child = cast("Element", node.element)
             self._children.append(child)
 
     @classmethod
-    def from_token(cls, token):
+    def from_token(cls, token: ParseResults) -> "Element":
         """
         Return an ``Element`` object constructed from a parser element token.
         """
-        tagname = token.tagname
-        attrs = [tuple(a) for a in token.attr_list]
-        text = token.text
+        tok = cast(Any, token)
+        tagname = cast(str, tok.tagname)
+        attrs = [cast(Tuple[str, str], tuple(a)) for a in tok.attr_list]
+        text = cast(str, tok.text)
         return cls(tagname, attrs, text)
 
     @property
-    def is_root(self):
+    def is_root(self) -> bool:
         """
         |True| if this element is the root of the tree and should include the
         namespace prefixes. |False| otherwise.
@@ -102,25 +111,25 @@ class Element:
         return self._is_root
 
     @is_root.setter
-    def is_root(self, value):
+    def is_root(self, value: object) -> None:
         self._is_root = bool(value)
 
     @property
-    def local_nspfxs(self):
+    def local_nspfxs(self) -> List[str]:
         """
         The namespace prefixes local to this element, both on the tagname and
         all of its attributes. An empty string (``''``) is used to represent
         the default namespace for an element tag having no prefix.
         """
 
-        def nspfx(name, is_element=False):
+        def nspfx(name: str, is_element: bool = False) -> OptionalType[str]:
             idx = name.find(":")
             if idx == -1:
                 return "" if is_element else None
             return name[:idx]
 
-        nspfxs = [nspfx(self._tagname, True)]
-        for name, val in self._attrs:
+        nspfxs: List[str] = [cast(str, nspfx(self._tagname, True))]
+        for name, _val in self._attrs:
             pfx = nspfx(name)
             if pfx is None or pfx in nspfxs or pfx == "xml":
                 continue
@@ -128,14 +137,14 @@ class Element:
         return nspfxs
 
     @property
-    def nspfxs(self):
+    def nspfxs(self) -> List[str]:
         """
         A sequence containing each of the namespace prefixes appearing in
         this tree. Each prefix appears once and only once, and in document
         order.
         """
 
-        def merge(seq, seq_2):
+        def merge(seq: List[str], seq_2: List[str]) -> None:
             for item in seq_2:
                 if item in seq:
                     continue
@@ -147,7 +156,7 @@ class Element:
         return nspfxs
 
     @property
-    def xml(self):
+    def xml(self) -> str:
         """
         The XML corresponding to the tree rooted at this element,
         pretty-printed using 2-spaces indentation at each level and with
@@ -155,7 +164,7 @@ class Element:
         """
         return self._xml(indent=0)
 
-    def _xml(self, indent):
+    def _xml(self, indent: int) -> str:
         """
         Return a string containing the XML of this element and all its
         children with a starting indent of `indent` spaces.
@@ -168,7 +177,7 @@ class Element:
         return xml
 
     @property
-    def _start_tag(self):
+    def _start_tag(self) -> str:
         """
         The text of the opening tag of this element, including attributes. If
         this is the root element, a namespace declaration for each of the
@@ -193,7 +202,7 @@ class Element:
         return tag
 
     @property
-    def _end_tag(self):
+    def _end_tag(self) -> str:
         """
         The text of the closing tag of this element, if there is one. If the
         element contains text, no leading indentation is included.
@@ -214,17 +223,18 @@ class Element:
 # parse actions ----------------------------------
 
 
-def connect_node_children(s, loc, tokens):
-    node = tokens[0]
-    node.element.connect_children(node.child_node_list)
+def connect_node_children(s: str, loc: int, tokens: ParseResults) -> None:
+    node = cast(Any, tokens[0])
+    cast("Element", node.element).connect_children(node.child_node_list)
 
 
-def connect_root_node_children(root_node):
-    root_node.element.connect_children(root_node.child_node_list)
-    root_node.element.is_root = True
+def connect_root_node_children(root_node: ParseResults) -> None:
+    rn = cast(Any, root_node)
+    cast("Element", rn.element).connect_children(rn.child_node_list)
+    cast("Element", rn.element).is_root = True
 
 
-def grammar():
+def grammar() -> ParserElement:
     # terminals ----------------------------------
     colon = Literal(":")
     equal = Suppress("=")
@@ -260,7 +270,7 @@ def grammar():
         element("element") + Group(Optional(slash + child_node_list))("child_node_list")
     ).setParseAction(connect_node_children)
 
-    child_node_list << (open_paren + delimitedList(node) + close_paren | node)
+    child_node_list <<= open_paren + delimitedList(node) + close_paren | node
 
     root_node = (
         element("element") + Group(Optional(slash + child_node_list))("child_node_list") + stringEnd

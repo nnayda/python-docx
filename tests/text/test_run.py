@@ -411,7 +411,7 @@ class DescribeRun:
 class DescribeRun_add_footnote:
     """Unit-test suite for Run.add_footnote."""
 
-    def it_inserts_a_reference_marker_immediately_after_the_run(self):
+    def it_inserts_a_reference_marker_immediately_after_the_run(self) -> None:
         from docx import Document
 
         document = Document()
@@ -427,7 +427,7 @@ class DescribeRun_add_footnote:
         assert marker.style == "FootnoteReference"
         assert runs[2].text == "after"
 
-    def it_returns_a_footnote_carrying_the_text(self):
+    def it_returns_a_footnote_carrying_the_text(self) -> None:
         from docx import Document
 
         run = Document().add_paragraph().add_run("anchor")
@@ -437,7 +437,7 @@ class DescribeRun_add_footnote:
         assert footnote.text == "the note"
         assert footnote.id == 1
 
-    def it_returns_an_empty_footnote_when_no_text_is_given(self):
+    def it_returns_an_empty_footnote_when_no_text_is_given(self) -> None:
         from docx import Document
 
         run = Document().add_paragraph().add_run("anchor")
@@ -445,5 +445,6 @@ class DescribeRun_add_footnote:
         footnote = run.add_footnote()
 
         # -- marker is still inserted and linked, but the note body is empty --
-        assert run._r.getnext().footnoteReference_lst[0].id == footnote.id
+        marker = cast(CT_R, run._r.getnext())
+        assert marker.footnoteReference_lst[0].id == footnote.id
         assert footnote.text == ""

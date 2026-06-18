@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import Dict, List, Tuple, cast
+
 import pytest
 
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
@@ -31,7 +33,9 @@ from ..unitutil.mock import (
 class DescribeOpcPackage:
     """Unit-test suite for `docx.opc.package.OpcPackage` objects."""
 
-    def it_can_open_a_pkg_file(self, PackageReader_, PartFactory_, Unmarshaller_):
+    def it_can_open_a_pkg_file(
+        self, PackageReader_: Mock, PartFactory_: Mock, Unmarshaller_: Mock
+    ) -> None:
         # mockery ----------------------
         pkg_file = Mock(name="pkg_file")
         pkg_reader = PackageReader_.from_file.return_value
@@ -42,34 +46,36 @@ class DescribeOpcPackage:
         Unmarshaller_.unmarshal.assert_called_once_with(pkg_reader, pkg, PartFactory_)
         assert isinstance(pkg, OpcPackage)
 
-    def it_initializes_its_rels_collection_on_first_reference(self, Relationships_):
+    def it_initializes_its_rels_collection_on_first_reference(self, Relationships_: Mock) -> None:
         pkg = OpcPackage()
         rels = pkg.rels
         Relationships_.assert_called_once_with(PACKAGE_URI.baseURI)
         assert rels == Relationships_.return_value
 
-    def it_can_add_a_relationship_to_a_part(self, rels_prop_: Mock, rels_: Mock, part_: Mock):
+    def it_can_add_a_relationship_to_a_part(
+        self, rels_prop_: Mock, rels_: Mock, part_: Mock
+    ) -> None:
         rels_prop_.return_value = rels_
         pkg = OpcPackage()
 
-        pkg.load_rel("http://rel/type", part_, "rId99")
+        pkg.load_rel("http://rel/type", cast(Part, part_), "rId99")
 
         rels_.add_relationship.assert_called_once_with("http://rel/type", part_, "rId99", False)
 
     def it_can_establish_a_relationship_to_another_part(
         self, rels_prop_: Mock, rels_: Mock, rel_: Mock, part_: Mock
-    ):
+    ) -> None:
         rel_.rId = "rId99"
         rels_.get_or_add.return_value = rel_
         rels_prop_.return_value = rels_
         pkg = OpcPackage()
 
-        rId = pkg.relate_to(part_, "http://rel/type")
+        rId = pkg.relate_to(cast(Part, part_), "http://rel/type")
 
         rels_.get_or_add.assert_called_once_with("http://rel/type", part_)
         assert rId == "rId99"
 
-    def it_can_provide_a_list_of_the_parts_it_contains(self):
+    def it_can_provide_a_list_of_the_parts_it_contains(self) -> None:
         # mockery ----------------------
         parts = [Mock(name="part1"), Mock(name="part2")]
         pkg = OpcPackage()
@@ -77,7 +83,7 @@ class DescribeOpcPackage:
         with patch.object(OpcPackage, "iter_parts", return_value=parts):
             assert pkg.parts == [parts[0], parts[1]]
 
-    def it_can_iterate_over_parts_by_walking_rels_graph(self, rels_prop_: Mock):
+    def it_can_iterate_over_parts_by_walking_rels_graph(self, rels_prop_: Mock) -> None:
         # +----------+       +--------+
         # | pkg_rels |-----> | part_1 |
         # +----------+       +--------+
@@ -100,8 +106,12 @@ class DescribeOpcPackage:
         assert len(list(pkg.iter_parts())) == 2
 
     def it_can_find_the_next_available_vector_partname(
-        self, next_partname_fixture, iter_parts_, PackURI_, packuri_
-    ):
+        self,
+        next_partname_fixture: Tuple[List[Mock], str],
+        iter_parts_: Mock,
+        PackURI_: Mock,
+        packuri_: Mock,
+    ) -> None:
         """A vector partname is one with a numeric suffix, like header42.xml."""
         parts_, expected_value = next_partname_fixture
         iter_parts_.return_value = iter(parts_)
@@ -113,15 +123,17 @@ class DescribeOpcPackage:
         PackURI_.assert_called_once_with(expected_value)
         assert partname is packuri_
 
-    def it_can_find_a_part_related_by_reltype(self, related_part_fixture_):
+    def it_can_find_a_part_related_by_reltype(
+        self, related_part_fixture_: Tuple[OpcPackage, str, Mock]
+    ) -> None:
         pkg, reltype, related_part_ = related_part_fixture_
         related_part = pkg.part_related_by(reltype)
-        pkg.rels.part_with_reltype.assert_called_once_with(reltype)
+        cast(Mock, pkg.rels.part_with_reltype).assert_called_once_with(reltype)
         assert related_part is related_part_
 
     def it_can_save_to_a_pkg_file(
         self, pkg_file_: Mock, PackageWriter_: Mock, parts_prop_: Mock, parts_: list[Mock]
-    ):
+    ) -> None:
         parts_prop_.return_value = parts_
         pkg = OpcPackage()
         pkg.save(pkg_file_)
@@ -129,19 +141,27 @@ class DescribeOpcPackage:
             part.before_marshal.assert_called_once_with()
         PackageWriter_.write.assert_called_once_with(pkg_file_, pkg.rels, parts_)
 
-    def it_provides_access_to_the_core_properties(self, core_props_fixture):
+    def it_provides_access_to_the_core_properties(
+        self, core_props_fixture: Tuple[OpcPackage, Mock]
+    ) -> None:
         opc_package, core_properties_ = core_props_fixture
         core_properties = opc_package.core_properties
         assert core_properties is core_properties_
 
-    def it_provides_access_to_the_core_properties_part_to_help(self, core_props_part_fixture):
+    def it_provides_access_to_the_core_properties_part_to_help(
+        self, core_props_part_fixture: Tuple[OpcPackage, Mock]
+    ) -> None:
         opc_package, core_properties_part_ = core_props_part_fixture
         core_properties_part = opc_package._core_properties_part
         assert core_properties_part is core_properties_part_
 
     def it_creates_a_default_core_props_part_if_none_present(
-        self, part_related_by_, CorePropertiesPart_, relate_to_, core_properties_part_
-    ):
+        self,
+        part_related_by_: Mock,
+        CorePropertiesPart_: Mock,
+        relate_to_: Mock,
+        core_properties_part_: Mock,
+    ) -> None:
         part_related_by_.side_effect = KeyError
         CorePropertiesPart_.default.return_value = core_properties_part_
         opc_package = OpcPackage()
@@ -156,22 +176,29 @@ class DescribeOpcPackage:
 
     @pytest.fixture
     def core_props_fixture(
-        self, _core_properties_part_prop_, core_properties_part_, core_properties_
-    ):
+        self,
+        _core_properties_part_prop_: Mock,
+        core_properties_part_: Mock,
+        core_properties_: Mock,
+    ) -> Tuple[OpcPackage, Mock]:
         opc_package = OpcPackage()
         _core_properties_part_prop_.return_value = core_properties_part_
         core_properties_part_.core_properties = core_properties_
         return opc_package, core_properties_
 
     @pytest.fixture
-    def core_props_part_fixture(self, part_related_by_, core_properties_part_):
+    def core_props_part_fixture(
+        self, part_related_by_: Mock, core_properties_part_: Mock
+    ) -> Tuple[OpcPackage, Mock]:
         opc_package = OpcPackage()
         part_related_by_.return_value = core_properties_part_
         return opc_package, core_properties_part_
 
     @pytest.fixture(params=[((), 1), ((1,), 2), ((1, 2), 3), ((2, 3), 1), ((1, 3), 2)])
-    def next_partname_fixture(self, request, iter_parts_):
-        existing_partname_ns, next_partname_n = request.param
+    def next_partname_fixture(
+        self, request: FixtureRequest, iter_parts_: Mock
+    ) -> Tuple[List[Mock], str]:
+        existing_partname_ns, next_partname_n = cast("Tuple[Tuple[int, ...], int]", request.param)
         parts_ = [
             instance_mock(request, Part, name="part[%d]" % idx, partname="/foo/bar/baz%d.xml" % n)
             for idx, n in enumerate(existing_partname_ns)
@@ -180,7 +207,9 @@ class DescribeOpcPackage:
         return parts_, expected_value
 
     @pytest.fixture
-    def related_part_fixture_(self, request: FixtureRequest, rels_prop_: Mock, rels_: Mock):
+    def related_part_fixture_(
+        self, request: FixtureRequest, rels_prop_: Mock, rels_: Mock
+    ) -> Tuple[OpcPackage, str, Mock]:
         related_part_ = instance_mock(request, Part, name="related_part_")
         rels_.part_with_reltype.return_value = related_part_
         pkg = OpcPackage()
@@ -190,102 +219,102 @@ class DescribeOpcPackage:
     # fixture components -----------------------------------
 
     @pytest.fixture
-    def CorePropertiesPart_(self, request: FixtureRequest):
+    def CorePropertiesPart_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.opc.package.CorePropertiesPart")
 
     @pytest.fixture
-    def core_properties_(self, request: FixtureRequest):
+    def core_properties_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, CoreProperties)
 
     @pytest.fixture
-    def core_properties_part_(self, request: FixtureRequest):
+    def core_properties_part_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, CorePropertiesPart)
 
     @pytest.fixture
-    def _core_properties_part_prop_(self, request: FixtureRequest):
+    def _core_properties_part_prop_(self, request: FixtureRequest) -> Mock:
         return property_mock(request, OpcPackage, "_core_properties_part")
 
     @pytest.fixture
-    def iter_parts_(self, request: FixtureRequest):
+    def iter_parts_(self, request: FixtureRequest) -> Mock:
         return method_mock(request, OpcPackage, "iter_parts")
 
     @pytest.fixture
-    def PackageReader_(self, request: FixtureRequest):
+    def PackageReader_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.opc.package.PackageReader")
 
     @pytest.fixture
-    def PackURI_(self, request: FixtureRequest):
+    def PackURI_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.opc.package.PackURI")
 
     @pytest.fixture
-    def packuri_(self, request: FixtureRequest):
+    def packuri_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, PackURI)
 
     @pytest.fixture
-    def PackageWriter_(self, request: FixtureRequest):
+    def PackageWriter_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.opc.package.PackageWriter")
 
     @pytest.fixture
-    def PartFactory_(self, request: FixtureRequest):
+    def PartFactory_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.opc.package.PartFactory")
 
     @pytest.fixture
-    def part_(self, request: FixtureRequest):
+    def part_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, Part)
 
     @pytest.fixture
-    def part_related_by_(self, request: FixtureRequest):
+    def part_related_by_(self, request: FixtureRequest) -> Mock:
         return method_mock(request, OpcPackage, "part_related_by")
 
     @pytest.fixture
-    def parts_(self, request: FixtureRequest):
+    def parts_(self, request: FixtureRequest) -> List[Mock]:
         part_ = instance_mock(request, Part, name="part_")
         part_2_ = instance_mock(request, Part, name="part_2_")
         return [part_, part_2_]
 
     @pytest.fixture
-    def parts_prop_(self, request: FixtureRequest):
+    def parts_prop_(self, request: FixtureRequest) -> Mock:
         return property_mock(request, OpcPackage, "parts")
 
     @pytest.fixture
-    def pkg_file_(self, request: FixtureRequest):
+    def pkg_file_(self, request: FixtureRequest) -> Mock:
         return loose_mock(request)
 
     @pytest.fixture
-    def Relationships_(self, request: FixtureRequest):
+    def Relationships_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.opc.package.Relationships")
 
     @pytest.fixture
-    def rel_(self, request: FixtureRequest):
+    def rel_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, _Relationship)
 
     @pytest.fixture
-    def relate_to_(self, request: FixtureRequest):
+    def relate_to_(self, request: FixtureRequest) -> Mock:
         return method_mock(request, OpcPackage, "relate_to")
 
     @pytest.fixture
-    def rels_(self, request: FixtureRequest):
+    def rels_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, Relationships)
 
     @pytest.fixture
-    def rels_prop_(self, request: FixtureRequest):
+    def rels_prop_(self, request: FixtureRequest) -> Mock:
         return property_mock(request, OpcPackage, "rels")
 
     @pytest.fixture
-    def Unmarshaller_(self, request: FixtureRequest):
+    def Unmarshaller_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.opc.package.Unmarshaller")
 
 
 class DescribeUnmarshaller:
     def it_can_unmarshal_from_a_pkg_reader(
         self,
-        pkg_reader_,
-        pkg_,
-        part_factory_,
-        _unmarshal_parts_,
-        _unmarshal_relationships_,
-        parts_dict_,
-    ):
+        pkg_reader_: Mock,
+        pkg_: Mock,
+        part_factory_: Mock,
+        _unmarshal_parts_: Mock,
+        _unmarshal_relationships_: Mock,
+        parts_dict_: Dict[Mock, Mock],
+    ) -> None:
         _unmarshal_parts_.return_value = parts_dict_
         Unmarshaller.unmarshal(pkg_reader_, pkg_, part_factory_)
 
@@ -297,15 +326,15 @@ class DescribeUnmarshaller:
 
     def it_can_unmarshal_parts(
         self,
-        pkg_reader_,
-        pkg_,
-        part_factory_,
-        parts_dict_,
-        partnames_,
-        content_types_,
-        reltypes_,
-        blobs_,
-    ):
+        pkg_reader_: Mock,
+        pkg_: Mock,
+        part_factory_: Mock,
+        parts_dict_: Dict[Mock, Mock],
+        partnames_: Tuple[Mock, Mock],
+        content_types_: Tuple[Mock, Mock],
+        reltypes_: Tuple[Mock, Mock],
+        blobs_: Tuple[Mock, Mock],
+    ) -> None:
         # fixture ----------------------
         partname_, partname_2_ = partnames_
         content_type_, content_type_2_ = content_types_
@@ -320,7 +349,7 @@ class DescribeUnmarshaller:
         ]
         assert parts == parts_dict_
 
-    def it_can_unmarshal_relationships(self):
+    def it_can_unmarshal_relationships(self) -> None:
         # test data --------------------
         reltype = "http://reltype"
         # mockery ----------------------
@@ -368,14 +397,18 @@ class DescribeUnmarshaller:
             ),
         )
         pkg = Mock(name="pkg")
-        parts = {}
+        parts: Dict[str, Mock] = {}
         for num in range(1, 3):
             name = "part%d" % num
             part = Mock(name=name)
             parts["partname%d" % num] = part
             pkg.attach_mock(part, name)
         # exercise ---------------------
-        Unmarshaller._unmarshal_relationships(pkg_reader, pkg, parts)
+        Unmarshaller._unmarshal_relationships(
+            cast(PackageReader, pkg_reader),
+            cast(OpcPackage, pkg),
+            cast("Dict[PackURI, Part]", parts),
+        )
         # verify -----------------------
         expected_pkg_calls = [
             call.load_rel(reltype, parts["partname1"], "rId1", False),
@@ -388,47 +421,59 @@ class DescribeUnmarshaller:
     # fixtures ---------------------------------------------
 
     @pytest.fixture
-    def blobs_(self, request: FixtureRequest):
+    def blobs_(self, request: FixtureRequest) -> Tuple[Mock, Mock]:
         blob_ = loose_mock(request, spec=str, name="blob_")
         blob_2_ = loose_mock(request, spec=str, name="blob_2_")
         return blob_, blob_2_
 
     @pytest.fixture
-    def content_types_(self, request: FixtureRequest):
+    def content_types_(self, request: FixtureRequest) -> Tuple[Mock, Mock]:
         content_type_ = loose_mock(request, spec=str, name="content_type_")
         content_type_2_ = loose_mock(request, spec=str, name="content_type_2_")
         return content_type_, content_type_2_
 
     @pytest.fixture
-    def part_factory_(self, request, parts_):
+    def part_factory_(self, request: FixtureRequest, parts_: Tuple[Mock, Mock]) -> Mock:
         part_factory_ = loose_mock(request, spec=Part)
         part_factory_.side_effect = parts_
         return part_factory_
 
     @pytest.fixture
-    def partnames_(self, request: FixtureRequest):
+    def partnames_(self, request: FixtureRequest) -> Tuple[Mock, Mock]:
         partname_ = loose_mock(request, spec=str, name="partname_")
         partname_2_ = loose_mock(request, spec=str, name="partname_2_")
         return partname_, partname_2_
 
     @pytest.fixture
-    def parts_(self, request: FixtureRequest):
+    def parts_(self, request: FixtureRequest) -> Tuple[Mock, Mock]:
         part_ = instance_mock(request, Part, name="part_")
         part_2_ = instance_mock(request, Part, name="part_2")
         return part_, part_2_
 
     @pytest.fixture
-    def parts_dict_(self, request, partnames_, parts_):
+    def parts_dict_(
+        self,
+        request: FixtureRequest,
+        partnames_: Tuple[Mock, Mock],
+        parts_: Tuple[Mock, Mock],
+    ) -> Dict[Mock, Mock]:
         partname_, partname_2_ = partnames_
         part_, part_2_ = parts_
         return {partname_: part_, partname_2_: part_2_}
 
     @pytest.fixture
-    def pkg_(self, request: FixtureRequest):
+    def pkg_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, OpcPackage)
 
     @pytest.fixture
-    def pkg_reader_(self, request, partnames_, content_types_, reltypes_, blobs_):
+    def pkg_reader_(
+        self,
+        request: FixtureRequest,
+        partnames_: Tuple[Mock, Mock],
+        content_types_: Tuple[Mock, Mock],
+        reltypes_: Tuple[Mock, Mock],
+        blobs_: Tuple[Mock, Mock],
+    ) -> Mock:
         partname_, partname_2_ = partnames_
         content_type_, content_type_2_ = content_types_
         reltype_, reltype_2_ = reltypes_
@@ -442,15 +487,15 @@ class DescribeUnmarshaller:
         return pkg_reader_
 
     @pytest.fixture
-    def reltypes_(self, request: FixtureRequest):
+    def reltypes_(self, request: FixtureRequest) -> Tuple[Mock, Mock]:
         reltype_ = instance_mock(request, str, name="reltype_")
         reltype_2_ = instance_mock(request, str, name="reltype_2")
         return reltype_, reltype_2_
 
     @pytest.fixture
-    def _unmarshal_parts_(self, request: FixtureRequest):
+    def _unmarshal_parts_(self, request: FixtureRequest) -> Mock:
         return method_mock(request, Unmarshaller, "_unmarshal_parts", autospec=False)
 
     @pytest.fixture
-    def _unmarshal_relationships_(self, request: FixtureRequest):
+    def _unmarshal_relationships_(self, request: FixtureRequest) -> Mock:
         return method_mock(request, Unmarshaller, "_unmarshal_relationships", autospec=False)

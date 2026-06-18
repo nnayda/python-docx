@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Callable, cast
 
 from docx.oxml.ns import nsdecls
 from docx.oxml.parser import parse_xml
@@ -61,8 +61,10 @@ class CT_GraphicalObject(BaseOxmlElement):
 class CT_GraphicalObjectData(BaseOxmlElement):
     """``<a:graphicData>`` element, container for the XML of a DrawingML object."""
 
-    pic: CT_Picture = ZeroOrOne("pic:pic")  # pyright: ignore[reportAssignmentType]
+    pic: CT_Picture | None = ZeroOrOne("pic:pic")  # pyright: ignore[reportAssignmentType]
     uri: str = RequiredAttribute("uri", XsdToken)  # pyright: ignore[reportAssignmentType]
+
+    _insert_pic: Callable[[CT_Picture], CT_Picture]
 
 
 class CT_Inline(BaseOxmlElement):
@@ -86,7 +88,7 @@ class CT_Inline(BaseOxmlElement):
         inline.docPr.id = shape_id
         inline.docPr.name = "Picture %d" % shape_id
         inline.graphic.graphicData.uri = "http://schemas.openxmlformats.org/drawingml/2006/picture"
-        inline.graphic.graphicData._insert_pic(pic)
+        inline.graphic.graphicData._insert_pic(pic)  # pyright: ignore[reportPrivateUsage]
         return inline
 
     @classmethod
@@ -124,8 +126,10 @@ class CT_NonVisualDrawingProps(BaseOxmlElement):
     Specifies the id and name of a DrawingML drawing.
     """
 
-    id = RequiredAttribute("id", ST_DrawingElementId)
-    name = RequiredAttribute("name", XsdString)
+    id: int = RequiredAttribute(  # pyright: ignore[reportAssignmentType]
+        "id", ST_DrawingElementId
+    )
+    name: str = RequiredAttribute("name", XsdString)  # pyright: ignore[reportAssignmentType]
 
 
 class CT_NonVisualPictureProperties(BaseOxmlElement):
@@ -146,7 +150,7 @@ class CT_Picture(BaseOxmlElement):
     @classmethod
     def new(cls, pic_id: int, filename: str, rId: str, cx: Length, cy: Length) -> CT_Picture:
         """A new minimum viable `<pic:pic>` (picture) element."""
-        pic = parse_xml(cls._pic_xml())
+        pic = cast("CT_Picture", parse_xml(cls._pic_xml()))
         pic.nvPicPr.cNvPr.id = pic_id
         pic.nvPicPr.cNvPr.name = filename
         pic.blipFill.blip.embed = rId
@@ -182,7 +186,9 @@ class CT_Picture(BaseOxmlElement):
 class CT_PictureNonVisual(BaseOxmlElement):
     """``<pic:nvPicPr>`` element, non-visual picture properties."""
 
-    cNvPr = OneAndOnlyOne("pic:cNvPr")
+    cNvPr: CT_NonVisualDrawingProps = OneAndOnlyOne(  # pyright: ignore[reportAssignmentType]
+        "pic:cNvPr"
+    )
 
 
 class CT_Point2D(BaseOxmlElement):
@@ -191,8 +197,8 @@ class CT_Point2D(BaseOxmlElement):
     Specifies an x, y coordinate (point).
     """
 
-    x = RequiredAttribute("x", ST_Coordinate)
-    y = RequiredAttribute("y", ST_Coordinate)
+    x: Length = RequiredAttribute("x", ST_Coordinate)  # pyright: ignore[reportAssignmentType]
+    y: Length = RequiredAttribute("y", ST_Coordinate)  # pyright: ignore[reportAssignmentType]
 
 
 class CT_PositiveSize2D(BaseOxmlElement):
@@ -222,7 +228,9 @@ class CT_RelativeRect(BaseOxmlElement):
 class CT_ShapeProperties(BaseOxmlElement):
     """``<pic:spPr>`` element, specifies size and shape of picture container."""
 
-    xfrm = ZeroOrOne(
+    get_or_add_xfrm: Callable[[], CT_Transform2D]
+
+    xfrm: CT_Transform2D | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
         "a:xfrm",
         successors=(
             "a:custGeom",
@@ -237,7 +245,7 @@ class CT_ShapeProperties(BaseOxmlElement):
     )
 
     @property
-    def cx(self):
+    def cx(self) -> Length | None:
         """Shape width as an instance of Emu, or None if not present."""
         xfrm = self.xfrm
         if xfrm is None:
@@ -245,12 +253,12 @@ class CT_ShapeProperties(BaseOxmlElement):
         return xfrm.cx
 
     @cx.setter
-    def cx(self, value):
+    def cx(self, value: Length):
         xfrm = self.get_or_add_xfrm()
         xfrm.cx = value
 
     @property
-    def cy(self):
+    def cy(self) -> Length | None:
         """Shape height as an instance of Emu, or None if not present."""
         xfrm = self.xfrm
         if xfrm is None:
@@ -258,7 +266,7 @@ class CT_ShapeProperties(BaseOxmlElement):
         return xfrm.cy
 
     @cy.setter
-    def cy(self, value):
+    def cy(self, value: Length):
         xfrm = self.get_or_add_xfrm()
         xfrm.cy = value
 
@@ -271,29 +279,35 @@ class CT_StretchInfoProperties(BaseOxmlElement):
 class CT_Transform2D(BaseOxmlElement):
     """``<a:xfrm>`` element, specifies size and shape of picture container."""
 
-    off = ZeroOrOne("a:off", successors=("a:ext",))
-    ext = ZeroOrOne("a:ext", successors=())
+    get_or_add_ext: Callable[[], CT_PositiveSize2D]
+
+    off: CT_Point2D | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:off", successors=("a:ext",)
+    )
+    ext: CT_PositiveSize2D | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:ext", successors=()
+    )
 
     @property
-    def cx(self):
+    def cx(self) -> Length | None:
         ext = self.ext
         if ext is None:
             return None
         return ext.cx
 
     @cx.setter
-    def cx(self, value):
+    def cx(self, value: Length):
         ext = self.get_or_add_ext()
         ext.cx = value
 
     @property
-    def cy(self):
+    def cy(self) -> Length | None:
         ext = self.ext
         if ext is None:
             return None
         return ext.cy
 
     @cy.setter
-    def cy(self, value):
+    def cy(self, value: Length):
         ext = self.get_or_add_ext()
         ext.cy = value

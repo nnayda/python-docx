@@ -2,6 +2,10 @@
 
 """Unit test suite for the docx.parts.document module."""
 
+from __future__ import annotations
+
+from typing import cast
+
 import pytest
 
 from docx import Document
@@ -11,6 +15,7 @@ from docx.opc.constants import CONTENT_TYPE as CT
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.opc.coreprops import CoreProperties
 from docx.opc.packuri import PackURI
+from docx.oxml.document import CT_Document
 from docx.package import Package
 from docx.parts.comments import CommentsPart
 from docx.parts.document import DocumentPart
@@ -38,11 +43,14 @@ from ..unitutil.mock import (
 class DescribeDocumentPart:
     def it_can_add_a_footer_part(
         self, package_: Mock, FooterPart_: Mock, footer_part_: Mock, relate_to_: Mock
-    ):
+    ) -> None:
         FooterPart_.new.return_value = footer_part_
         relate_to_.return_value = "rId12"
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         footer_part, rId = document_part.add_footer_part()
@@ -54,11 +62,14 @@ class DescribeDocumentPart:
 
     def it_can_add_a_header_part(
         self, package_: Mock, HeaderPart_: Mock, header_part_: Mock, relate_to_: Mock
-    ):
+    ) -> None:
         HeaderPart_.new.return_value = header_part_
         relate_to_.return_value = "rId7"
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         header_part, rId = document_part.add_header_part()
@@ -68,9 +79,12 @@ class DescribeDocumentPart:
         assert header_part is header_part_
         assert rId == "rId7"
 
-    def it_can_drop_a_specified_header_part(self, drop_rel_: Mock, package_: Mock):
+    def it_can_drop_a_specified_header_part(self, drop_rel_: Mock, package_: Mock) -> None:
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         document_part.drop_header_part("rId42")
@@ -79,11 +93,14 @@ class DescribeDocumentPart:
 
     def it_provides_access_to_a_footer_part_by_rId(
         self, related_parts_prop_: Mock, related_parts_: Mock, footer_part_: Mock, package_: Mock
-    ):
+    ) -> None:
         related_parts_prop_.return_value = related_parts_
         related_parts_.__getitem__.return_value = footer_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         footer_part = document_part.footer_part("rId9")
@@ -93,11 +110,14 @@ class DescribeDocumentPart:
 
     def it_provides_access_to_a_header_part_by_rId(
         self, related_parts_prop_: Mock, related_parts_: Mock, header_part_: Mock, package_: Mock
-    ):
+    ) -> None:
         related_parts_prop_.return_value = related_parts_
         related_parts_.__getitem__.return_value = header_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         header_part = document_part.header_part("rId11")
@@ -105,9 +125,12 @@ class DescribeDocumentPart:
         related_parts_.__getitem__.assert_called_once_with("rId11")
         assert header_part is header_part_
 
-    def it_can_save_the_package_to_a_file(self, package_: Mock):
+    def it_can_save_the_package_to_a_file(self, package_: Mock) -> None:
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         document_part.save("foobar.docx")
@@ -116,40 +139,54 @@ class DescribeDocumentPart:
 
     def it_provides_access_to_the_comments_added_to_the_document(
         self, _comments_part_prop_: Mock, comments_part_: Mock, comments_: Mock, package_: Mock
-    ):
+    ) -> None:
         comments_part_.comments = comments_
         _comments_part_prop_.return_value = comments_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         assert document_part.comments is comments_
 
     def it_provides_access_to_the_document_settings(
         self, _settings_part_prop_: Mock, settings_part_: Mock, settings_: Mock, package_: Mock
-    ):
+    ) -> None:
         settings_part_.settings = settings_
         _settings_part_prop_.return_value = settings_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         assert document_part.settings is settings_
 
     def it_provides_access_to_the_document_styles(
         self, _styles_part_prop_: Mock, styles_part_: Mock, styles_: Mock, package_: Mock
-    ):
+    ) -> None:
         styles_part_.styles = styles_
         _styles_part_prop_.return_value = styles_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         assert document_part.styles is styles_
 
-    def it_provides_access_to_its_core_properties(self, package_: Mock, core_properties_: Mock):
+    def it_provides_access_to_its_core_properties(
+        self, package_: Mock, core_properties_: Mock
+    ) -> None:
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
         package_.core_properties = core_properties_
 
@@ -157,11 +194,14 @@ class DescribeDocumentPart:
 
     def it_provides_access_to_the_inline_shapes_in_the_document(
         self, InlineShapes_: Mock, package_: Mock
-    ):
+    ) -> None:
         document_elm = element("w:document/w:body")
         body_elm = document_elm[0]
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, document_elm, package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, document_elm),
+            package_,
         )
 
         inline_shapes = document_part.inline_shapes
@@ -171,10 +211,13 @@ class DescribeDocumentPart:
 
     def it_provides_access_to_the_numbering_part(
         self, part_related_by_: Mock, numbering_part_: Mock, package_: Mock
-    ):
+    ) -> None:
         part_related_by_.return_value = numbering_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         numbering_part = document_part.numbering_part
@@ -189,11 +232,14 @@ class DescribeDocumentPart:
         NumberingPart_: Mock,
         numbering_part_: Mock,
         package_: Mock,
-    ):
+    ) -> None:
         part_related_by_.side_effect = KeyError
         NumberingPart_.new.return_value = numbering_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         numbering_part = document_part.numbering_part
@@ -204,11 +250,14 @@ class DescribeDocumentPart:
 
     def it_can_get_a_style_by_id(
         self, styles_prop_: Mock, styles_: Mock, style_: Mock, package_: Mock
-    ):
+    ) -> None:
         styles_prop_.return_value = styles_
         styles_.get_by_id.return_value = style_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         style = document_part.get_style("BodyText", WD_STYLE_TYPE.PARAGRAPH)
@@ -218,11 +267,14 @@ class DescribeDocumentPart:
 
     def it_can_get_the_id_of_a_style(
         self, style_: Mock, styles_prop_: Mock, styles_: Mock, package_: Mock
-    ):
+    ) -> None:
         styles_prop_.return_value = styles_
         styles_.get_style_id.return_value = "BodyCharacter"
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         style_id = document_part.get_style_id(style_, WD_STYLE_TYPE.CHARACTER)
@@ -232,10 +284,13 @@ class DescribeDocumentPart:
 
     def it_provides_access_to_its_comments_part_to_help(
         self, package_: Mock, part_related_by_: Mock, comments_part_: Mock
-    ):
+    ) -> None:
         part_related_by_.return_value = comments_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         comments_part = document_part._comments_part
@@ -250,11 +305,14 @@ class DescribeDocumentPart:
         CommentsPart_: Mock,
         comments_part_: Mock,
         relate_to_: Mock,
-    ):
+    ) -> None:
         part_related_by_.side_effect = KeyError
         CommentsPart_.default.return_value = comments_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         comments_part = document_part._comments_part
@@ -265,10 +323,13 @@ class DescribeDocumentPart:
 
     def it_provides_access_to_its_settings_part_to_help(
         self, part_related_by_: Mock, settings_part_: Mock, package_: Mock
-    ):
+    ) -> None:
         part_related_by_.return_value = settings_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         settings_part = document_part._settings_part
@@ -283,11 +344,14 @@ class DescribeDocumentPart:
         SettingsPart_: Mock,
         settings_part_: Mock,
         relate_to_: Mock,
-    ):
+    ) -> None:
         part_related_by_.side_effect = KeyError
         SettingsPart_.default.return_value = settings_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         settings_part = document_part._settings_part
@@ -298,10 +362,13 @@ class DescribeDocumentPart:
 
     def it_provides_access_to_its_styles_part_to_help(
         self, part_related_by_: Mock, styles_part_: Mock, package_: Mock
-    ):
+    ) -> None:
         part_related_by_.return_value = styles_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         styles_part = document_part._styles_part
@@ -316,11 +383,14 @@ class DescribeDocumentPart:
         StylesPart_: Mock,
         styles_part_: Mock,
         relate_to_: Mock,
-    ):
+    ) -> None:
         part_related_by_.side_effect = KeyError
         StylesPart_.default.return_value = styles_part_
         document_part = DocumentPart(
-            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+            PackURI("/word/document.xml"),
+            CT.WML_DOCUMENT,
+            cast(CT_Document, element("w:document")),
+            package_,
         )
 
         styles_part = document_part._styles_part
@@ -348,106 +418,106 @@ class DescribeDocumentPart:
         return property_mock(request, DocumentPart, "_comments_part")
 
     @pytest.fixture
-    def core_properties_(self, request: FixtureRequest):
+    def core_properties_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, CoreProperties)
 
     @pytest.fixture
-    def drop_rel_(self, request: FixtureRequest):
+    def drop_rel_(self, request: FixtureRequest) -> Mock:
         return method_mock(request, DocumentPart, "drop_rel", autospec=True)
 
     @pytest.fixture
-    def FooterPart_(self, request: FixtureRequest):
+    def FooterPart_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.parts.document.FooterPart")
 
     @pytest.fixture
-    def footer_part_(self, request: FixtureRequest):
+    def footer_part_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, FooterPart)
 
     @pytest.fixture
-    def HeaderPart_(self, request: FixtureRequest):
+    def HeaderPart_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.parts.document.HeaderPart")
 
     @pytest.fixture
-    def header_part_(self, request: FixtureRequest):
+    def header_part_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, HeaderPart)
 
     @pytest.fixture
-    def InlineShapes_(self, request: FixtureRequest):
+    def InlineShapes_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.parts.document.InlineShapes")
 
     @pytest.fixture
-    def NumberingPart_(self, request: FixtureRequest):
+    def NumberingPart_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.parts.document.NumberingPart")
 
     @pytest.fixture
-    def numbering_part_(self, request: FixtureRequest):
+    def numbering_part_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, NumberingPart)
 
     @pytest.fixture
-    def package_(self, request: FixtureRequest):
+    def package_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, Package)
 
     @pytest.fixture
-    def part_related_by_(self, request: FixtureRequest):
+    def part_related_by_(self, request: FixtureRequest) -> Mock:
         return method_mock(request, DocumentPart, "part_related_by")
 
     @pytest.fixture
-    def relate_to_(self, request: FixtureRequest):
+    def relate_to_(self, request: FixtureRequest) -> Mock:
         return method_mock(request, DocumentPart, "relate_to")
 
     @pytest.fixture
-    def related_parts_(self, request: FixtureRequest):
+    def related_parts_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, dict)
 
     @pytest.fixture
-    def related_parts_prop_(self, request: FixtureRequest):
+    def related_parts_prop_(self, request: FixtureRequest) -> Mock:
         return property_mock(request, DocumentPart, "related_parts")
 
     @pytest.fixture
-    def SettingsPart_(self, request: FixtureRequest):
+    def SettingsPart_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.parts.document.SettingsPart")
 
     @pytest.fixture
-    def settings_(self, request: FixtureRequest):
+    def settings_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, Settings)
 
     @pytest.fixture
-    def settings_part_(self, request: FixtureRequest):
+    def settings_part_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, SettingsPart)
 
     @pytest.fixture
-    def _settings_part_prop_(self, request: FixtureRequest):
+    def _settings_part_prop_(self, request: FixtureRequest) -> Mock:
         return property_mock(request, DocumentPart, "_settings_part")
 
     @pytest.fixture
-    def style_(self, request: FixtureRequest):
+    def style_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, BaseStyle)
 
     @pytest.fixture
-    def styles_(self, request: FixtureRequest):
+    def styles_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, Styles)
 
     @pytest.fixture
-    def StylesPart_(self, request: FixtureRequest):
+    def StylesPart_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.parts.document.StylesPart")
 
     @pytest.fixture
-    def styles_part_(self, request: FixtureRequest):
+    def styles_part_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, StylesPart)
 
     @pytest.fixture
-    def styles_prop_(self, request: FixtureRequest):
+    def styles_prop_(self, request: FixtureRequest) -> Mock:
         return property_mock(request, DocumentPart, "styles")
 
     @pytest.fixture
-    def _styles_part_prop_(self, request: FixtureRequest):
+    def _styles_part_prop_(self, request: FixtureRequest) -> Mock:
         return property_mock(request, DocumentPart, "_styles_part")
 
 
 class DescribeDocumentPart_footnotes:
     """Unit-test suite for footnote support on DocumentPart."""
 
-    def it_lazily_creates_and_relates_a_footnotes_part(self):
+    def it_lazily_creates_and_relates_a_footnotes_part(self) -> None:
         document_part = Document().part
 
         footnotes_part = document_part.footnotes_part
@@ -455,7 +525,7 @@ class DescribeDocumentPart_footnotes:
         assert isinstance(footnotes_part, FootnotesPart)
         assert document_part.part_related_by(RT.FOOTNOTES) is footnotes_part
 
-    def it_injects_the_built_in_footnote_styles(self):
+    def it_injects_the_built_in_footnote_styles(self) -> None:
         document_part = Document().part
 
         document_part._ensure_footnote_styles()
@@ -467,7 +537,7 @@ class DescribeDocumentPart_footnotes:
             == "FootnoteReference"
         )
 
-    def it_does_not_duplicate_styles_on_repeated_calls(self):
+    def it_does_not_duplicate_styles_on_repeated_calls(self) -> None:
         document_part = Document().part
 
         document_part._ensure_footnote_styles()
@@ -477,7 +547,7 @@ class DescribeDocumentPart_footnotes:
         assert style_ids.count("FootnoteText") == 1
         assert style_ids.count("FootnoteReference") == 1
 
-    def it_adds_a_footnote_with_minted_id_and_text(self):
+    def it_adds_a_footnote_with_minted_id_and_text(self) -> None:
         document_part = Document().part
 
         footnote = document_part.add_footnote("A note.")
@@ -491,7 +561,7 @@ class DescribeDocumentPart_footnotes:
 class DescribeDocumentPart_hyperlinks:
     """Unit-test suite for hyperlink-style support on DocumentPart."""
 
-    def it_injects_the_built_in_hyperlink_style(self):
+    def it_injects_the_built_in_hyperlink_style(self) -> None:
         document_part = Document().part
 
         document_part._ensure_hyperlink_style()
@@ -499,7 +569,7 @@ class DescribeDocumentPart_hyperlinks:
         styles = document_part.styles
         assert styles.get_by_id("Hyperlink", WD_STYLE_TYPE.CHARACTER).style_id == "Hyperlink"
 
-    def it_does_not_duplicate_the_style_on_repeated_calls(self):
+    def it_does_not_duplicate_the_style_on_repeated_calls(self) -> None:
         document_part = Document().part
 
         document_part._ensure_hyperlink_style()
@@ -508,7 +578,7 @@ class DescribeDocumentPart_hyperlinks:
         style_ids = [s.style_id for s in document_part.styles]
         assert style_ids.count("Hyperlink") == 1
 
-    def it_ensures_the_style_via_the_StoryPart_delegator(self):
+    def it_ensures_the_style_via_the_StoryPart_delegator(self) -> None:
         document_part = Document().part
 
         document_part.ensure_hyperlink_style()

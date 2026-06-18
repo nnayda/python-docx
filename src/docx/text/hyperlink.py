@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from docx.shared import Parented
+from docx.shared import StoryChild
 from docx.text.run import Run
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 HYPERLINK_STYLE_ID = "Hyperlink"
 
 
-class Hyperlink(Parented):
+class Hyperlink(StoryChild):
     """Proxy object wrapping a `<w:hyperlink>` element.
 
     A hyperlink occurs as a child of a paragraph, at the same level as a Run. A

@@ -1,7 +1,14 @@
 """Latent style-related objects."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Iterator
+
 from docx.shared import ElementProxy
 from docx.styles import BabelFish
+
+if TYPE_CHECKING:
+    from docx.oxml.styles import CT_LatentStyles, CT_LsdException
 
 
 class LatentStyles(ElementProxy):
@@ -9,7 +16,11 @@ class LatentStyles(ElementProxy):
     to the collection of |_LatentStyle| objects that define overrides of those defaults
     for a particular named latent style."""
 
-    def __getitem__(self, key):
+    def __init__(self, latentStyles: CT_LatentStyles):
+        super().__init__(latentStyles)
+        self._element = latentStyles
+
+    def __getitem__(self, key: str) -> _LatentStyle:
         """Enables dictionary-style access to a latent style by name."""
         style_name = BabelFish.ui2internal(key)
         lsdException = self._element.get_by_name(style_name)
@@ -17,13 +28,13 @@ class LatentStyles(ElementProxy):
             raise KeyError("no latent style with name '%s'" % key)
         return _LatentStyle(lsdException)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[_LatentStyle]:
         return (_LatentStyle(ls) for ls in self._element.lsdException_lst)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._element.lsdException_lst)
 
-    def add_latent_style(self, name):
+    def add_latent_style(self, name: str) -> _LatentStyle:
         """Return a newly added |_LatentStyle| object to override the inherited defaults
         defined in this latent styles object for the built-in style having `name`."""
         lsdException = self._element.add_lsdException()
@@ -40,7 +51,7 @@ class LatentStyles(ElementProxy):
         return self._element.defUIPriority
 
     @default_priority.setter
-    def default_priority(self, value):
+    def default_priority(self, value: int | None):
         self._element.defUIPriority = value
 
     @property
@@ -53,7 +64,7 @@ class LatentStyles(ElementProxy):
         return self._element.bool_prop("defSemiHidden")
 
     @default_to_hidden.setter
-    def default_to_hidden(self, value):
+    def default_to_hidden(self, value: bool):
         self._element.set_bool_prop("defSemiHidden", value)
 
     @property
@@ -68,7 +79,7 @@ class LatentStyles(ElementProxy):
         return self._element.bool_prop("defLockedState")
 
     @default_to_locked.setter
-    def default_to_locked(self, value):
+    def default_to_locked(self, value: bool):
         self._element.set_bool_prop("defLockedState", value)
 
     @property
@@ -78,7 +89,7 @@ class LatentStyles(ElementProxy):
         return self._element.bool_prop("defQFormat")
 
     @default_to_quick_style.setter
-    def default_to_quick_style(self, value):
+    def default_to_quick_style(self, value: bool):
         self._element.set_bool_prop("defQFormat", value)
 
     @property
@@ -88,7 +99,7 @@ class LatentStyles(ElementProxy):
         return self._element.bool_prop("defUnhideWhenUsed")
 
     @default_to_unhide_when_used.setter
-    def default_to_unhide_when_used(self, value):
+    def default_to_unhide_when_used(self, value: bool):
         self._element.set_bool_prop("defUnhideWhenUsed", value)
 
     @property
@@ -103,7 +114,7 @@ class LatentStyles(ElementProxy):
         return self._element.count
 
     @load_count.setter
-    def load_count(self, value):
+    def load_count(self, value: int | None):
         self._element.count = value
 
 
@@ -116,6 +127,11 @@ class _LatentStyle(ElementProxy):
     `w:latentStyles` element.
     """
 
+    def __init__(self, lsdException: CT_LsdException):
+        super().__init__(lsdException)
+        self._element = lsdException
+        self._lsdException = lsdException
+
     def delete(self):
         """Remove this latent style definition such that the defaults defined in the
         containing |LatentStyles| object provide the effective value for each of its
@@ -124,7 +140,7 @@ class _LatentStyle(ElementProxy):
         Attempting to access any attributes on this object after calling this method
         will raise |AttributeError|.
         """
-        self._element.delete()
+        self._lsdException.delete()
         self._element = None
 
     @property
@@ -135,11 +151,11 @@ class _LatentStyle(ElementProxy):
         |None| indicates the effective value is inherited from the parent
         ``<w:latentStyles>`` element.
         """
-        return self._element.on_off_prop("semiHidden")
+        return self._lsdException.on_off_prop("semiHidden")
 
     @hidden.setter
-    def hidden(self, value):
-        self._element.set_on_off_prop("semiHidden", value)
+    def hidden(self, value: bool | None):
+        self._lsdException.set_on_off_prop("semiHidden", value)
 
     @property
     def locked(self):
@@ -149,25 +165,25 @@ class _LatentStyle(ElementProxy):
         cannot be applied to document content. This behavior is only active when
         formatting protection is turned on for the document (via the Developer menu).
         """
-        return self._element.on_off_prop("locked")
+        return self._lsdException.on_off_prop("locked")
 
     @locked.setter
-    def locked(self, value):
-        self._element.set_on_off_prop("locked", value)
+    def locked(self, value: bool | None):
+        self._lsdException.set_on_off_prop("locked", value)
 
     @property
-    def name(self):
+    def name(self) -> str:
         """The name of the built-in style this exception applies to."""
-        return BabelFish.internal2ui(self._element.name)
+        return BabelFish.internal2ui(self._lsdException.name)
 
     @property
     def priority(self):
         """The integer sort key for this latent style in the Word UI."""
-        return self._element.uiPriority
+        return self._lsdException.uiPriority
 
     @priority.setter
-    def priority(self, value):
-        self._element.uiPriority = value
+    def priority(self, value: int | None):
+        self._lsdException.uiPriority = value
 
     @property
     def quick_style(self):
@@ -177,11 +193,11 @@ class _LatentStyle(ElementProxy):
         |None| indicates the effective value should be inherited from the default values
         in its parent |LatentStyles| object.
         """
-        return self._element.on_off_prop("qFormat")
+        return self._lsdException.on_off_prop("qFormat")
 
     @quick_style.setter
-    def quick_style(self, value):
-        self._element.set_on_off_prop("qFormat", value)
+    def quick_style(self, value: bool | None):
+        self._lsdException.set_on_off_prop("qFormat", value)
 
     @property
     def unhide_when_used(self):
@@ -191,8 +207,8 @@ class _LatentStyle(ElementProxy):
         |None| indicates the effective value should be inherited from the default
         specified by its parent |LatentStyles| object.
         """
-        return self._element.on_off_prop("unhideWhenUsed")
+        return self._lsdException.on_off_prop("unhideWhenUsed")
 
     @unhide_when_used.setter
-    def unhide_when_used(self, value):
-        self._element.set_on_off_prop("unhideWhenUsed", value)
+    def unhide_when_used(self, value: bool | None):
+        self._lsdException.set_on_off_prop("unhideWhenUsed", value)

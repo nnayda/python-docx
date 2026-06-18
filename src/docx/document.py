@@ -79,8 +79,11 @@ class Document(ElementProxy):
         first_run = runs[0]
         last_run = runs[-1]
 
-        # -- Note that comments can only appear in the document part --
-        comment = self.comments.add_comment(text=text, author=author, initials=initials)
+        # -- Note that comments can only appear in the document part. `Comments.add_comment`
+        # -- treats the empty string as "no body text", so normalize `None` to "" here. --
+        comment = self.comments.add_comment(
+            text=text if text is not None else "", author=author, initials=initials
+        )
 
         # -- let the first run orchestrate placement of the comment range start and end --
         first_run.mark_comment_range(last_run, comment.comment_id)

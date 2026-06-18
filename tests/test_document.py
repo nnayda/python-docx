@@ -59,6 +59,25 @@ class DescribeDocument:
         run_mark_comment_range_.assert_called_once_with(run, run, 42)
         assert comment is comment_
 
+    def it_normalizes_None_comment_text_to_empty_string(
+        self,
+        document_part_: Mock,
+        comments_prop_: Mock,
+        comments_: Mock,
+        comment_: Mock,
+        run_mark_comment_range_: Mock,
+    ):
+        comment_.comment_id = 42
+        comments_.add_comment.return_value = comment_
+        comments_prop_.return_value = comments_
+        document = Document(cast(CT_Document, element("w:document/w:body/w:p/w:r")), document_part_)
+        run = document.paragraphs[0].runs[0]
+
+        document.add_comment(run, text=None)
+
+        # -- `Comments.add_comment` only accepts `str`, so `None` must be normalized to "" --
+        comments_.add_comment.assert_called_once_with(text="", author="", initials="")
+
     @pytest.mark.parametrize(
         ("level", "style"), [(0, "Title"), (1, "Heading 1"), (2, "Heading 2"), (9, "Heading 9")]
     )

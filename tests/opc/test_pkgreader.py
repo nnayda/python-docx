@@ -1,4 +1,10 @@
+# pyright: reportPrivateUsage=false
+
 """Unit test suite for docx.opc.pkgreader module."""
+
+from __future__ import annotations
+
+from typing import cast
 
 import pytest
 
@@ -13,9 +19,11 @@ from docx.opc.pkgreader import (
     _SerializedRelationship,
     _SerializedRelationships,
 )
+from docx.opc.shared import CaseInsensitiveDict
 
 from ..unitutil.mock import (
     ANY,
+    FixtureRequest,
     Mock,
     call,
     class_mock,
@@ -31,8 +39,13 @@ from .unitdata.types import a_Default, a_Types, an_Override
 
 class DescribePackageReader:
     def it_can_construct_from_pkg_file(
-        self, _init_, PhysPkgReader_, from_xml, _srels_for, _load_serialized_parts
-    ):
+        self,
+        _init_: Mock,
+        PhysPkgReader_: Mock,
+        from_xml: Mock,
+        _srels_for: Mock,
+        _load_serialized_parts: Mock,
+    ) -> None:
         phys_reader = PhysPkgReader_.return_value
         content_types = from_xml.return_value
         pkg_srels = _srels_for.return_value
@@ -49,19 +62,25 @@ class DescribePackageReader:
         _init_.assert_called_once_with(ANY, content_types, pkg_srels, sparts)
         assert isinstance(pkg_reader, PackageReader)
 
-    def it_can_iterate_over_the_serialized_parts(self, iter_sparts_fixture):
+    def it_can_iterate_over_the_serialized_parts(
+        self, iter_sparts_fixture: tuple[PackageReader, list[tuple[Mock, Mock, Mock, Mock]]]
+    ) -> None:
         pkg_reader, expected_iter_spart_items = iter_sparts_fixture
         iter_spart_items = list(pkg_reader.iter_sparts())
         assert iter_spart_items == expected_iter_spart_items
 
-    def it_can_iterate_over_all_the_srels(self):
+    def it_can_iterate_over_all_the_srels(self) -> None:
         # mockery ----------------------
         pkg_srels = ["srel1", "srel2"]
         sparts = [
             Mock(name="spart1", partname="pn1", srels=["srel3", "srel4"]),
             Mock(name="spart2", partname="pn2", srels=["srel5", "srel6"]),
         ]
-        pkg_reader = PackageReader(None, pkg_srels, sparts)
+        pkg_reader = PackageReader(
+            cast("_ContentTypeMap", None),
+            cast("_SerializedRelationships", pkg_srels),
+            cast("tuple[_SerializedPart, ...]", sparts),
+        )
         # exercise ---------------------
         generated_tuples = list(pkg_reader.iter_srels())
         # verify -----------------------
@@ -75,7 +94,7 @@ class DescribePackageReader:
         ]
         assert generated_tuples == expected_tuples
 
-    def it_can_load_serialized_parts(self, _SerializedPart_, _walk_phys_parts):
+    def it_can_load_serialized_parts(self, _SerializedPart_: Mock, _walk_phys_parts: Mock) -> None:
         # test data --------------------
         test_data = (
             ("/part/name1.xml", "app/vnd.type_1", "reltype1", "<Part_1/>", "srels_1"),
@@ -92,7 +111,9 @@ class DescribePackageReader:
             Mock(name="spart_2"),
         )
         # exercise ---------------------
-        retval = PackageReader._load_serialized_parts(phys_reader, pkg_srels, content_types)
+        retval = PackageReader._load_serialized_parts(
+            phys_reader, pkg_srels, cast("_ContentTypeMap", content_types)
+        )
         # verify -----------------------
         expected_calls = [
             call("/part/name1.xml", "app/vnd.type_1", "<Part_1/>", "reltype1", "srels_1"),
@@ -101,7 +122,7 @@ class DescribePackageReader:
         assert _SerializedPart_.call_args_list == expected_calls
         assert retval == expected_sparts
 
-    def it_can_walk_phys_pkg_parts(self, _srels_for):
+    def it_can_walk_phys_pkg_parts(self, _srels_for: Mock) -> None:
         # test data --------------------
         # +----------+       +--------+
         # | pkg_rels |-----> | part_1 |
@@ -148,13 +169,15 @@ class DescribePackageReader:
         pkg_srels = srels[:2]
         part_1_srels = srels[2:3]
         part_2_srels = srels[3:5]
-        part_3_srels = []
+        part_3_srels: list[Mock] = []
         # mockery ----------------------
         phys_reader = Mock(name="phys_reader")
         _srels_for.side_effect = [part_1_srels, part_2_srels, part_3_srels]
         phys_reader.blob_for.side_effect = [part_1_blob, part_2_blob, part_3_blob]
         # exercise ---------------------
-        generated_tuples = list(PackageReader._walk_phys_parts(phys_reader, pkg_srels))
+        generated_tuples = list(
+            PackageReader._walk_phys_parts(phys_reader, cast("_SerializedRelationships", pkg_srels))
+        )
         # verify -----------------------
         expected_tuples = [
             (partname_1, part_1_blob, reltype1, part_1_srels),
@@ -163,7 +186,7 @@ class DescribePackageReader:
         ]
         assert generated_tuples == expected_tuples
 
-    def it_can_retrieve_srels_for_a_source_uri(self, _SerializedRelationships_):
+    def it_can_retrieve_srels_for_a_source_uri(self, _SerializedRelationships_: Mock) -> None:
         # mockery ----------------------
         phys_reader = Mock(name="phys_reader")
         source_uri = Mock(name="source_uri")
@@ -180,28 +203,39 @@ class DescribePackageReader:
     # fixtures -------------------------------------------------------
 
     @pytest.fixture
-    def blobs_(self, request):
+    def blobs_(self, request: FixtureRequest) -> tuple[Mock, Mock]:
         blob_ = loose_mock(request, spec=str, name="blob_")
         blob_2_ = loose_mock(request, spec=str, name="blob_2_")
         return blob_, blob_2_
 
     @pytest.fixture
-    def content_types_(self, request):
+    def content_types_(self, request: FixtureRequest) -> tuple[Mock, Mock]:
         content_type_ = loose_mock(request, spec=str, name="content_type_")
         content_type_2_ = loose_mock(request, spec=str, name="content_type_2_")
         return content_type_, content_type_2_
 
     @pytest.fixture
-    def from_xml(self, request):
+    def from_xml(self, request: FixtureRequest) -> Mock:
         return method_mock(request, _ContentTypeMap, "from_xml", autospec=False)
 
     @pytest.fixture
-    def _init_(self, request):
+    def _init_(self, request: FixtureRequest) -> Mock:
         return initializer_mock(request, PackageReader)
 
     @pytest.fixture
-    def iter_sparts_fixture(self, sparts_, partnames_, content_types_, reltypes_, blobs_):
-        pkg_reader = PackageReader(None, None, sparts_)
+    def iter_sparts_fixture(
+        self,
+        sparts_: list[Mock],
+        partnames_: tuple[Mock, Mock],
+        content_types_: tuple[Mock, Mock],
+        reltypes_: tuple[Mock, Mock],
+        blobs_: tuple[Mock, Mock],
+    ) -> tuple[PackageReader, list[tuple[Mock, Mock, Mock, Mock]]]:
+        pkg_reader = PackageReader(
+            cast("_ContentTypeMap", None),
+            cast("_SerializedRelationships", None),
+            cast("tuple[_SerializedPart, ...]", sparts_),
+        )
         expected_iter_spart_items = [
             (partnames_[0], content_types_[0], reltypes_[0], blobs_[0]),
             (partnames_[1], content_types_[1], reltypes_[1], blobs_[1]),
@@ -209,11 +243,11 @@ class DescribePackageReader:
         return pkg_reader, expected_iter_spart_items
 
     @pytest.fixture
-    def _load_serialized_parts(self, request):
+    def _load_serialized_parts(self, request: FixtureRequest) -> Mock:
         return method_mock(request, PackageReader, "_load_serialized_parts", autospec=False)
 
     @pytest.fixture
-    def partnames_(self, request):
+    def partnames_(self, request: FixtureRequest) -> tuple[Mock, Mock]:
         partname_ = loose_mock(request, spec=str, name="partname_")
         partname_2_ = loose_mock(request, spec=str, name="partname_2_")
         return partname_, partname_2_
@@ -225,22 +259,29 @@ class DescribePackageReader:
         p.stop()
 
     @pytest.fixture
-    def reltypes_(self, request):
+    def reltypes_(self, request: FixtureRequest) -> tuple[Mock, Mock]:
         reltype_ = instance_mock(request, str, name="reltype_")
         reltype_2_ = instance_mock(request, str, name="reltype_2")
         return reltype_, reltype_2_
 
     @pytest.fixture
-    def _SerializedPart_(self, request):
+    def _SerializedPart_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.opc.pkgreader._SerializedPart")
 
     @pytest.fixture
-    def _SerializedRelationships_(self, request):
+    def _SerializedRelationships_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.opc.pkgreader._SerializedRelationships")
 
     @pytest.fixture
-    def sparts_(self, request, partnames_, content_types_, reltypes_, blobs_):
-        sparts_ = []
+    def sparts_(
+        self,
+        request: FixtureRequest,
+        partnames_: tuple[Mock, Mock],
+        content_types_: tuple[Mock, Mock],
+        reltypes_: tuple[Mock, Mock],
+        blobs_: tuple[Mock, Mock],
+    ) -> list[Mock]:
+        sparts_: list[Mock] = []
         for idx in range(2):
             name = "spart_%s" % (("%d_" % (idx + 1)) if idx else "")
             spart_ = instance_mock(
@@ -256,52 +297,60 @@ class DescribePackageReader:
         return sparts_
 
     @pytest.fixture
-    def _srels_for(self, request):
+    def _srels_for(self, request: FixtureRequest) -> Mock:
         return method_mock(request, PackageReader, "_srels_for", autospec=False)
 
     @pytest.fixture
-    def _walk_phys_parts(self, request):
+    def _walk_phys_parts(self, request: FixtureRequest) -> Mock:
         return method_mock(request, PackageReader, "_walk_phys_parts", autospec=False)
 
 
 class Describe_ContentTypeMap:
-    def it_can_construct_from_ct_item_xml(self, from_xml_fixture):
+    def it_can_construct_from_ct_item_xml(
+        self, from_xml_fixture: tuple[str, dict[str, str], dict[str, str]]
+    ) -> None:
         content_types_xml, expected_defaults, expected_overrides = from_xml_fixture
-        ct_map = _ContentTypeMap.from_xml(content_types_xml)
+        ct_map = _ContentTypeMap.from_xml(cast("bytes", content_types_xml))
         assert ct_map._defaults == expected_defaults
         assert ct_map._overrides == expected_overrides
 
-    def it_matches_an_override_on_case_insensitive_partname(self, match_override_fixture):
+    def it_matches_an_override_on_case_insensitive_partname(
+        self, match_override_fixture: tuple[_ContentTypeMap, PackURI, str]
+    ) -> None:
         ct_map, partname, content_type = match_override_fixture
         assert ct_map[partname] == content_type
 
-    def it_falls_back_to_case_insensitive_extension_default_match(self, match_default_fixture):
+    def it_falls_back_to_case_insensitive_extension_default_match(
+        self, match_default_fixture: tuple[_ContentTypeMap, PackURI, str]
+    ) -> None:
         ct_map, partname, content_type = match_default_fixture
         assert ct_map[partname] == content_type
 
-    def it_should_raise_on_partname_not_found(self):
+    def it_should_raise_on_partname_not_found(self) -> None:
         ct_map = _ContentTypeMap()
         with pytest.raises(KeyError):
             ct_map[PackURI("/!blat/rhumba.1x&")]
 
-    def it_should_raise_on_key_not_instance_of_PackURI(self):
+    def it_should_raise_on_key_not_instance_of_PackURI(self) -> None:
         ct_map = _ContentTypeMap()
-        ct_map._overrides = {PackURI("/part/name1.xml"): "app/vnd.type1"}
+        ct_map._overrides = cast(
+            "CaseInsensitiveDict", {PackURI("/part/name1.xml"): "app/vnd.type1"}
+        )
         with pytest.raises(KeyError):
             ct_map["/part/name1.xml"]
 
     # fixtures ---------------------------------------------
 
     @pytest.fixture
-    def from_xml_fixture(self):
+    def from_xml_fixture(self) -> tuple[str, dict[str, str], dict[str, str]]:
         entries = (
             ("Default", "xml", CT.XML),
             ("Default", "PNG", CT.PNG),
             ("Override", "/ppt/presentation.xml", CT.PML_PRESENTATION_MAIN),
         )
         content_types_xml = self._xml_from(entries)
-        expected_defaults = {}
-        expected_overrides = {}
+        expected_defaults: dict[str, str] = {}
+        expected_overrides: dict[str, str] = {}
         for entry in entries:
             if entry[0] == "Default":
                 ext = entry[1].lower()
@@ -319,8 +368,10 @@ class Describe_ContentTypeMap:
             ("/foo/bar.jpg", "JPG", "image/jpeg"),
         ]
     )
-    def match_default_fixture(self, request):
-        partname_str, ext, content_type = request.param
+    def match_default_fixture(
+        self, request: FixtureRequest
+    ) -> tuple[_ContentTypeMap, PackURI, str]:
+        partname_str, ext, content_type = cast("tuple[str, str, str]", request.param)
         partname = PackURI(partname_str)
         ct_map = _ContentTypeMap()
         ct_map._add_override(PackURI("/bar/foo.xyz"), "application/xyz")
@@ -334,8 +385,10 @@ class Describe_ContentTypeMap:
             ("/FoO/bAr.XmL", "/foo/bar.xml"),
         ]
     )
-    def match_override_fixture(self, request):
-        partname_str, should_match_partname_str = request.param
+    def match_override_fixture(
+        self, request: FixtureRequest
+    ) -> tuple[_ContentTypeMap, PackURI, str]:
+        partname_str, should_match_partname_str = cast("tuple[str, str]", request.param)
         partname = PackURI(partname_str)
         should_match_partname = PackURI(should_match_partname_str)
         content_type = "appl/vnd-foobar"
@@ -343,7 +396,7 @@ class Describe_ContentTypeMap:
         ct_map._add_override(partname, content_type)
         return ct_map, should_match_partname, content_type
 
-    def _xml_from(self, entries):
+    def _xml_from(self, entries: tuple[tuple[str, str, str], ...]) -> str:
         """
         Return XML for a [Content_Types].xml based on items in `entries`.
         """
@@ -365,7 +418,7 @@ class Describe_ContentTypeMap:
 
 
 class Describe_SerializedPart:
-    def it_remembers_construction_values(self):
+    def it_remembers_construction_values(self) -> None:
         # test data --------------------
         partname = "/part/name.xml"
         content_type = "app/vnd.type"
@@ -373,7 +426,13 @@ class Describe_SerializedPart:
         blob = "<Part/>"
         srels = "srels proxy"
         # exercise ---------------------
-        spart = _SerializedPart(partname, content_type, reltype, blob, srels)
+        spart = _SerializedPart(
+            cast("PackURI", partname),
+            content_type,
+            reltype,
+            cast("bytes", blob),
+            cast("_SerializedRelationships", srels),
+        )
         # verify -----------------------
         assert spart.partname == partname
         assert spart.content_type == content_type
@@ -383,7 +442,7 @@ class Describe_SerializedPart:
 
 
 class Describe_SerializedRelationship:
-    def it_remembers_construction_values(self):
+    def it_remembers_construction_values(self) -> None:
         # test data --------------------
         rel_elm = Mock(
             name="rel_elm",
@@ -400,7 +459,7 @@ class Describe_SerializedRelationship:
         assert srel.target_ref == "docProps/core.xml"
         assert srel.target_mode == RTM.INTERNAL
 
-    def it_knows_when_it_is_external(self):
+    def it_knows_when_it_is_external(self) -> None:
         cases = (RTM.INTERNAL, RTM.EXTERNAL, "FOOBAR")
         expected_values = (False, True, False)
         for target_mode, expected_value in zip(cases, expected_values):
@@ -411,10 +470,10 @@ class Describe_SerializedRelationship:
                 target_ref=None,
                 target_mode=target_mode,
             )
-            srel = _SerializedRelationship(None, rel_elm)
+            srel = _SerializedRelationship(cast("str", None), rel_elm)
             assert srel.is_external is expected_value
 
-    def it_can_calculate_its_target_partname(self):
+    def it_can_calculate_its_target_partname(self) -> None:
         # test data --------------------
         cases = (
             ("/", "docProps/core.xml", "/docProps/core.xml"),
@@ -439,7 +498,7 @@ class Describe_SerializedRelationship:
             # verify -------------------
             assert srel.target_partname == expected_partname
 
-    def it_raises_on_target_partname_when_external(self):
+    def it_raises_on_target_partname_when_external(self) -> None:
         rel_elm = Mock(
             name="rel_elm",
             rId="rId9",
@@ -453,7 +512,7 @@ class Describe_SerializedRelationship:
 
 
 class Describe_SerializedRelationships:
-    def it_can_load_from_xml(self, parse_xml_, _SerializedRelationship_):
+    def it_can_load_from_xml(self, parse_xml_: Mock, _SerializedRelationship_: Mock) -> None:
         # mockery ----------------------
         baseURI, rels_item_xml, rel_elm_1, rel_elm_2 = (
             Mock(name="baseURI"),
@@ -474,10 +533,10 @@ class Describe_SerializedRelationships:
         assert _SerializedRelationship_.call_args_list == expected_calls
         assert isinstance(srels, _SerializedRelationships)
 
-    def it_should_be_iterable(self):
+    def it_should_be_iterable(self) -> None:
         srels = _SerializedRelationships()
         try:
-            for x in srels:
+            for _ in srels:
                 pass
         except TypeError:
             msg = "_SerializedRelationships object is not iterable"
@@ -486,9 +545,9 @@ class Describe_SerializedRelationships:
     # fixtures ---------------------------------------------
 
     @pytest.fixture
-    def parse_xml_(self, request):
+    def parse_xml_(self, request: FixtureRequest) -> Mock:
         return function_mock(request, "docx.opc.pkgreader.parse_xml")
 
     @pytest.fixture
-    def _SerializedRelationship_(self, request):
+    def _SerializedRelationship_(self, request: FixtureRequest) -> Mock:
         return class_mock(request, "docx.opc.pkgreader._SerializedRelationship")

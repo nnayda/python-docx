@@ -1,4 +1,8 @@
+# pyright: reportPrivateUsage=false
+
 """Test suite for pptx.oxml.__init__.py module, primarily XML parser-related."""
+
+from __future__ import annotations
 
 import pytest
 from lxml import etree
@@ -9,18 +13,18 @@ from docx.oxml.shared import BaseOxmlElement
 
 
 class DescribeOxmlElement:
-    def it_returns_an_lxml_element_with_matching_tag_name(self):
+    def it_returns_an_lxml_element_with_matching_tag_name(self) -> None:
         element = OxmlElement("a:foo")
         assert isinstance(element, etree._Element)
         assert element.tag == ("{http://schemas.openxmlformats.org/drawingml/2006/main}foo")
 
-    def it_adds_supplied_attributes(self):
+    def it_adds_supplied_attributes(self) -> None:
         element = OxmlElement("a:foo", {"a": "b", "c": "d"})
         assert etree.tostring(element) == (
             '<a:foo xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" a="b" c="d"/>'
         ).encode("utf-8")
 
-    def it_adds_additional_namespace_declarations_when_supplied(self):
+    def it_adds_additional_namespace_declarations_when_supplied(self) -> None:
         ns1 = "http://schemas.openxmlformats.org/drawingml/2006/main"
         ns2 = "other"
         element = OxmlElement("a:foo", nsdecls={"a": ns1, "x": ns2})
@@ -30,7 +34,7 @@ class DescribeOxmlElement:
 
 
 class DescribeOxmlParser:
-    def it_strips_whitespace_between_elements(self, whitespace_fixture):
+    def it_strips_whitespace_between_elements(self, whitespace_fixture: tuple[str, str]) -> None:
         pretty_xml_text, stripped_xml_text = whitespace_fixture
         element = etree.fromstring(pretty_xml_text, oxml_parser)
         xml_text = etree.tostring(element, encoding="unicode")
@@ -39,17 +43,17 @@ class DescribeOxmlParser:
     # fixtures -------------------------------------------------------
 
     @pytest.fixture
-    def whitespace_fixture(self):
+    def whitespace_fixture(self) -> tuple[str, str]:
         pretty_xml_text = "<foø>\n  <bår>text</bår>\n</foø>\n"
         stripped_xml_text = "<foø><bår>text</bår></foø>"
         return pretty_xml_text, stripped_xml_text
 
 
 class DescribeParseXml:
-    def it_accepts_bytes_and_assumes_utf8_encoding(self, xml_bytes):
+    def it_accepts_bytes_and_assumes_utf8_encoding(self, xml_bytes: bytes) -> None:
         parse_xml(xml_bytes)
 
-    def it_accepts_unicode_providing_there_is_no_encoding_declaration(self):
+    def it_accepts_unicode_providing_there_is_no_encoding_declaration(self) -> None:
         non_enc_decl = '<?xml version="1.0" standalone="yes"?>'
         enc_decl = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         xml_body = "<foo><bar>føøbår</bar></foo>"
@@ -63,7 +67,7 @@ class DescribeParseXml:
         with pytest.raises(ValueError, match="Unicode strings with encoding declara"):
             parse_xml(xml_text)
 
-    def it_uses_registered_element_classes(self, xml_bytes):
+    def it_uses_registered_element_classes(self, xml_bytes: bytes) -> None:
         register_element_cls("a:foo", CustElmCls)
         element = parse_xml(xml_bytes)
         assert isinstance(element, CustElmCls)
@@ -71,7 +75,7 @@ class DescribeParseXml:
     # fixture components ---------------------------------------------
 
     @pytest.fixture
-    def xml_bytes(self):
+    def xml_bytes(self) -> bytes:
         return (
             '<a:foo xmlns:a="http://schemas.openxmlformats.org/drawingml/200'
             '6/main">\n'
@@ -81,7 +85,7 @@ class DescribeParseXml:
 
 
 class DescribeRegisterElementCls:
-    def it_determines_class_used_for_elements_with_matching_tagname(self, xml_text):
+    def it_determines_class_used_for_elements_with_matching_tagname(self, xml_text: str) -> None:
         register_element_cls("a:foo", CustElmCls)
         foo = parse_xml(xml_text)
         assert type(foo) is CustElmCls
@@ -90,7 +94,7 @@ class DescribeRegisterElementCls:
     # fixture components ---------------------------------------------
 
     @pytest.fixture
-    def xml_text(self):
+    def xml_text(self) -> str:
         return (
             '<a:foo xmlns:a="http://schemas.openxmlformats.org/drawingml/200'
             '6/main">\n'

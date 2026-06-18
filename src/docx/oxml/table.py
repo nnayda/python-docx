@@ -32,7 +32,7 @@ from docx.oxml.xmlchemy import (
     ZeroOrMore,
     ZeroOrOne,
 )
-from docx.shared import Emu, Length, Twips
+from docx.shared import Emu, Length, RGBColor, Twips
 
 if TYPE_CHECKING:
     from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -306,6 +306,7 @@ class CT_TblPr(BaseOxmlElement):
 
     get_or_add_bidiVisual: Callable[[], CT_OnOff]
     get_or_add_jc: Callable[[], CT_Jc]
+    get_or_add_tblBorders: Callable[[], CT_TblBorders]
     get_or_add_tblLayout: Callable[[], CT_TblLayoutType]
     _add_tblStyle: Callable[[], CT_String]
     _remove_bidiVisual: Callable[[], None]
@@ -412,16 +413,20 @@ class CT_TcColor(BaseOxmlElement):
     """Used for ``<w:shd>`` and ``<w:tcW>`` elements and many others, to specify a
     table cell color."""
 
-    val = RequiredAttribute("w:val", ST_HexColorClear)
-    color = RequiredAttribute("w:color", ST_HexColorAuto)
-    fill = RequiredAttribute("w:fill", ST_HexColor)
+    val: str = RequiredAttribute("w:val", ST_HexColorClear)  # pyright: ignore[reportAssignmentType]
+    color: str = RequiredAttribute(  # pyright: ignore[reportAssignmentType]
+        "w:color", ST_HexColorAuto
+    )
+    fill: RGBColor | str = RequiredAttribute(  # pyright: ignore[reportAssignmentType]
+        "w:fill", ST_HexColor
+    )
 
     @property
-    def bg_color(self):
+    def bg_color(self) -> RGBColor | str:
         return self.fill
 
     @bg_color.setter
-    def bg_color(self, value):
+    def bg_color(self, value: RGBColor | str):
         self.val = "clear"
         self.color = "auto"
         self.fill = value
@@ -453,7 +458,7 @@ class CT_TblWidth(BaseOxmlElement):
         return self.type == "auto"
 
     @autofit.setter
-    def autofit(self, value):
+    def autofit(self, value: bool):
         if value:
             self.type = "auto"
             self.w = Emu(0).twips
@@ -614,14 +619,14 @@ class CT_Tc(BaseOxmlElement):
             self.width = Length(self.width + other_tc.width)
 
     @property
-    def bg_color(self):
+    def bg_color(self) -> RGBColor | str | None:
         tcPr = self.tcPr
         if tcPr is None:
             return None
         return tcPr.bg_color
 
     @bg_color.setter
-    def bg_color(self, value):
+    def bg_color(self, value: RGBColor | str | None):
         tcPr = self.get_or_add_tcPr()
         tcPr.bg_color = value
 
@@ -846,10 +851,13 @@ class CT_TcPr(BaseOxmlElement):
     """``<w:tcPr>`` element, defining table cell properties."""
 
     get_or_add_gridSpan: Callable[[], CT_DecimalNumber]
+    get_or_add_shd: Callable[[], CT_TcColor]
+    get_or_add_tcBorders: Callable[[], CT_TcBorders]
     get_or_add_tcW: Callable[[], CT_TblWidth]
     get_or_add_vAlign: Callable[[], CT_VerticalJc]
     _add_vMerge: Callable[[], CT_VMerge]
     _remove_gridSpan: Callable[[], None]
+    _remove_shd: Callable[[], None]
     _remove_vAlign: Callable[[], None]
     _remove_vMerge: Callable[[], None]
 
@@ -956,14 +964,17 @@ class CT_TcPr(BaseOxmlElement):
         tcW.width = value
 
     @property
-    def bg_color(self):
+    def bg_color(self) -> RGBColor | str | None:
         shd = self.shd
         if shd is None:
             return None
         return shd.bg_color
 
     @bg_color.setter
-    def bg_color(self, value):
+    def bg_color(self, value: RGBColor | str | None):
+        if value is None:
+            self._remove_shd()
+            return
         shd = self.get_or_add_shd()
         shd.bg_color = value
 
@@ -1042,7 +1053,7 @@ class CT_TrPr(BaseOxmlElement):
         trHeight = self.get_or_add_trHeight()
         trHeight.val = value
 
-    def _get_bool_val(self, name):
+    def _get_bool_val(self, name: str) -> bool | None:
         """
         Return the value of the boolean child element having *name*, e.g.
         'b', 'i', and 'smallCaps'.
@@ -1052,7 +1063,7 @@ class CT_TrPr(BaseOxmlElement):
             return None
         return element.val
 
-    def _set_bool_val(self, name, value):
+    def _set_bool_val(self, name: str, value: bool | None) -> None:
         if value is None:
             getattr(self, "_remove_%s" % name)()
             return
@@ -1077,10 +1088,27 @@ class CT_VMerge(BaseOxmlElement):
 
 
 class CT_Border(BaseOxmlElement):
-    val = RequiredAttribute("w:val", ST_Border)
-    color = OptionalAttribute("w:color", ST_HexColor, default="auto")
-    sz = OptionalAttribute("w:sz", ST_EighthPointMeasure, default=4)
-    space = OptionalAttribute("w:space", ST_PointMeasure, default=0)
+    _remove_val: Callable[[], None]
+    _remove_sz: Callable[[], None]
+    _remove_space: Callable[[], None]
+    _remove_color: Callable[[], None]
+
+    val: str = RequiredAttribute("w:val", ST_Border)  # pyright: ignore[reportAssignmentType]
+    color: RGBColor | str = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "w:color", ST_HexColor, default="auto"
+    )
+    # -- `default` accepts an int at runtime via the simple type's converter, but the
+    # -- descriptor's annotation doesn't enumerate `int`; ignore the spurious arg-type. --
+    sz: int = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "w:sz",
+        ST_EighthPointMeasure,
+        default=4,  # pyright: ignore[reportArgumentType]
+    )
+    space: int = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "w:space",
+        ST_PointMeasure,
+        default=0,  # pyright: ignore[reportArgumentType]
+    )
 
 
 class CT_TcBorders(BaseOxmlElement):
@@ -1096,32 +1124,61 @@ class CT_TcBorders(BaseOxmlElement):
         "w:tl2br",
         "w:tr2bl",
     )
-    top = ZeroOrOne("w:top", successors=_tag_seq[1:])
-    start = ZeroOrOne("w:start", successors=_tag_seq[2:])
-    left = ZeroOrOne("w:left", successors=_tag_seq[3:])
-    bottom = ZeroOrOne("w:bottom", successors=_tag_seq[4:])
-    end = ZeroOrOne("w:end", successors=_tag_seq[5:])
-    right = ZeroOrOne("w:right", successors=_tag_seq[6:])
-    insideH = ZeroOrOne("w:insideH", successors=_tag_seq[7:])
-    insideV = ZeroOrOne("w:insideV", successors=_tag_seq[8:])
-    tl2br = ZeroOrOne("w:tl2br", successors=_tag_seq[9:])
-    tr2bl = ZeroOrOne("w:tr2bl", successors=[])
+    top: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:top", successors=_tag_seq[1:]
+    )
+    start: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:start", successors=_tag_seq[2:]
+    )
+    left: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:left", successors=_tag_seq[3:]
+    )
+    bottom: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:bottom", successors=_tag_seq[4:]
+    )
+    end: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:end", successors=_tag_seq[5:]
+    )
+    right: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:right", successors=_tag_seq[6:]
+    )
+    insideH: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:insideH", successors=_tag_seq[7:]
+    )
+    insideV: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:insideV", successors=_tag_seq[8:]
+    )
+    tl2br: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:tl2br", successors=_tag_seq[9:]
+    )
+    tr2bl: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:tr2bl", successors=()
+    )
 
     @property
-    def as_dict(self):
-        borders = {}
+    def as_dict(self) -> dict[str, CT_Border]:
+        borders: dict[str, CT_Border] = {}
         for tag in self._tag_seq:
             name = tag.split(":")[1]
-            brd = getattr(self, name, None)
+            brd = cast("CT_Border | None", getattr(self, name, None))
             if brd is None:
                 continue
             borders[name] = brd
         return borders
 
-    def add_border(self, name, line, sz=None, space=None, color=None):
+    def add_border(
+        self,
+        name: str,
+        line: str,
+        sz: int | None = None,
+        space: int | None = None,
+        color: RGBColor | str | None = None,
+    ) -> CT_Border | None:
         if "w:%s" % name not in self._tag_seq:
             raise AttributeError("border %s can not be applied" % name)
-        get_or_add_method = getattr(self, "get_or_add_%s" % name, None)
+        get_or_add_method = cast(
+            "Callable[[], CT_Border] | None", getattr(self, "get_or_add_%s" % name, None)
+        )
         if get_or_add_method:
             element = get_or_add_method()
             element.val = line
@@ -1133,36 +1190,57 @@ class CT_TcBorders(BaseOxmlElement):
                 element.color = color
             return element
 
-    def remove_border(self, name):
-        remove_method = getattr(self, "_remove_%s" % name, None)
+    def remove_border(self, name: str) -> None:
+        remove_method = cast("Callable[[], None] | None", getattr(self, "_remove_%s" % name, None))
         if remove_method:
             remove_method()
 
 
 class CT_TblBorders(BaseOxmlElement):
     _tag_seq = ("w:top", "w:start", "w:bottom", "w:end", "w:insideH", "w:insideV")
-    top = ZeroOrOne("w:top", successors=_tag_seq[1:])
-    start = ZeroOrOne("w:start", successors=_tag_seq[2:])
-    bottom = ZeroOrOne("w:bottom", successors=_tag_seq[3:])
-    end = ZeroOrOne("w:end", successors=_tag_seq[4:])
-    insideH = ZeroOrOne("w:insideH", successors=_tag_seq[5:])
-    insideV = ZeroOrOne("w:insideV", successors=[])
+    top: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:top", successors=_tag_seq[1:]
+    )
+    start: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:start", successors=_tag_seq[2:]
+    )
+    bottom: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:bottom", successors=_tag_seq[3:]
+    )
+    end: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:end", successors=_tag_seq[4:]
+    )
+    insideH: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:insideH", successors=_tag_seq[5:]
+    )
+    insideV: CT_Border | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:insideV", successors=()
+    )
 
     @property
-    def as_dict(self):
-        borders = {}
+    def as_dict(self) -> dict[str, CT_Border]:
+        borders: dict[str, CT_Border] = {}
         for tag in self._tag_seq:
             name = tag.split(":")[1]
-            brd = getattr(self, name, None)
+            brd = cast("CT_Border | None", getattr(self, name, None))
             if brd is None:
                 continue
             borders[name] = brd
         return borders
 
-    def add_border(self, name, line, sz=None, space=None, color=None):
+    def add_border(
+        self,
+        name: str,
+        line: str,
+        sz: int | None = None,
+        space: int | None = None,
+        color: RGBColor | str | None = None,
+    ) -> CT_Border | None:
         if "w:%s" % name not in self._tag_seq:
             raise AttributeError("border %s can not be applied" % name)
-        get_or_add_method = getattr(self, "get_or_add_%s" % name, None)
+        get_or_add_method = cast(
+            "Callable[[], CT_Border] | None", getattr(self, "get_or_add_%s" % name, None)
+        )
         if get_or_add_method:
             element = get_or_add_method()
             element.val = line
@@ -1174,7 +1252,7 @@ class CT_TblBorders(BaseOxmlElement):
                 element.color = color
             return element
 
-    def remove_border(self, name):
-        remove_method = getattr(self, "_remove_%s" % name, None)
+    def remove_border(self, name: str) -> None:
+        remove_method = cast("Callable[[], None] | None", getattr(self, "_remove_%s" % name, None))
         if remove_method:
             remove_method()

@@ -1,16 +1,27 @@
+# pyright: reportPrivateUsage=false
+
 """Test suite for the docx.parts.numbering module."""
+
+from __future__ import annotations
+
+from typing import cast
 
 import pytest
 
+from docx.opc.packuri import PackURI
 from docx.oxml.numbering import CT_Numbering
+from docx.oxml.xmlchemy import BaseOxmlElement
+from docx.package import Package
 from docx.parts.numbering import NumberingPart, _NumberingDefinitions
 
 from ..oxml.unitdata.numbering import a_num, a_numbering
-from ..unitutil.mock import class_mock, instance_mock
+from ..unitutil.mock import FixtureRequest, Mock, class_mock, instance_mock
 
 
 class DescribeNumberingPart:
-    def it_provides_access_to_the_numbering_definitions(self, num_defs_fixture):
+    def it_provides_access_to_the_numbering_definitions(
+        self, num_defs_fixture: tuple[NumberingPart, Mock, Mock, Mock]
+    ) -> None:
         (
             numbering_part,
             _NumberingDefinitions_,
@@ -24,8 +35,15 @@ class DescribeNumberingPart:
     # fixtures -------------------------------------------------------
 
     @pytest.fixture
-    def num_defs_fixture(self, _NumberingDefinitions_, numbering_elm_, numbering_definitions_):
-        numbering_part = NumberingPart(None, None, numbering_elm_, None)
+    def num_defs_fixture(
+        self, _NumberingDefinitions_: Mock, numbering_elm_: Mock, numbering_definitions_: Mock
+    ) -> tuple[NumberingPart, Mock, Mock, Mock]:
+        numbering_part = NumberingPart(
+            cast(PackURI, None),
+            cast(str, None),
+            cast(BaseOxmlElement, numbering_elm_),
+            cast(Package, None),
+        )
         return (
             numbering_part,
             _NumberingDefinitions_,
@@ -36,7 +54,7 @@ class DescribeNumberingPart:
     # fixture components ---------------------------------------------
 
     @pytest.fixture
-    def _NumberingDefinitions_(self, request, numbering_definitions_):
+    def _NumberingDefinitions_(self, request: FixtureRequest, numbering_definitions_: Mock) -> Mock:
         return class_mock(
             request,
             "docx.parts.numbering._NumberingDefinitions",
@@ -44,27 +62,29 @@ class DescribeNumberingPart:
         )
 
     @pytest.fixture
-    def numbering_definitions_(self, request):
+    def numbering_definitions_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, _NumberingDefinitions)
 
     @pytest.fixture
-    def numbering_elm_(self, request):
+    def numbering_elm_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, CT_Numbering)
 
 
 class Describe_NumberingDefinitions:
-    def it_knows_how_many_numbering_definitions_it_contains(self, len_fixture):
+    def it_knows_how_many_numbering_definitions_it_contains(
+        self, len_fixture: tuple[_NumberingDefinitions, int]
+    ) -> None:
         numbering_definitions, numbering_definition_count = len_fixture
         assert len(numbering_definitions) == numbering_definition_count
 
     # fixtures -------------------------------------------------------
 
     @pytest.fixture(params=[0, 1, 2, 3])
-    def len_fixture(self, request):
-        numbering_definition_count = request.param
+    def len_fixture(self, request: FixtureRequest) -> tuple[_NumberingDefinitions, int]:
+        numbering_definition_count = cast(int, request.param)
         numbering_bldr = a_numbering().with_nsdecls()
-        for idx in range(numbering_definition_count):
+        for _ in range(numbering_definition_count):
             numbering_bldr.with_child(a_num())
         numbering_elm = numbering_bldr.element
-        numbering_definitions = _NumberingDefinitions(numbering_elm)
+        numbering_definitions = _NumberingDefinitions(cast(CT_Numbering, numbering_elm))
         return numbering_definitions, numbering_definition_count

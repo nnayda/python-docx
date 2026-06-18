@@ -1,12 +1,18 @@
 """Test suite for the docx.opc.packuri module."""
 
+from __future__ import annotations
+
+from typing import Iterator, Sequence, Tuple, TypeVar
+
 import pytest
 
 from docx.opc.packuri import PackURI
 
+T = TypeVar("T")
+
 
 class DescribePackURI:
-    def cases(self, expected_values):
+    def cases(self, expected_values: Sequence[T]) -> Iterator[Tuple[PackURI, T]]:
         """
         Return list of tuples zipped from uri_str cases and
         `expected_values`. Raise if lengths don't match.
@@ -22,37 +28,37 @@ class DescribePackURI:
         pack_uris = [PackURI(uri_str) for uri_str in uri_str_cases]
         return zip(pack_uris, expected_values)
 
-    def it_can_construct_from_relative_ref(self):
+    def it_can_construct_from_relative_ref(self) -> None:
         baseURI = "/ppt/slides"
         relative_ref = "../slideLayouts/slideLayout1.xml"
         pack_uri = PackURI.from_rel_ref(baseURI, relative_ref)
         assert pack_uri == "/ppt/slideLayouts/slideLayout1.xml"
 
-    def it_should_raise_on_construct_with_bad_pack_uri_str(self):
+    def it_should_raise_on_construct_with_bad_pack_uri_str(self) -> None:
         with pytest.raises(ValueError, match="PackURI must begin with slash"):
             PackURI("foobar")
 
-    def it_can_calculate_baseURI(self):
+    def it_can_calculate_baseURI(self) -> None:
         expected_values = ("/", "/ppt", "/ppt/slides")
         for pack_uri, expected_baseURI in self.cases(expected_values):
             assert pack_uri.baseURI == expected_baseURI
 
-    def it_can_calculate_extension(self):
+    def it_can_calculate_extension(self) -> None:
         expected_values = ("", "xml", "xml")
         for pack_uri, expected_ext in self.cases(expected_values):
             assert pack_uri.ext == expected_ext
 
-    def it_can_calculate_filename(self):
+    def it_can_calculate_filename(self) -> None:
         expected_values = ("", "presentation.xml", "slide1.xml")
         for pack_uri, expected_filename in self.cases(expected_values):
             assert pack_uri.filename == expected_filename
 
-    def it_knows_the_filename_index(self):
+    def it_knows_the_filename_index(self) -> None:
         expected_values = (None, None, 1)
         for pack_uri, expected_idx in self.cases(expected_values):
             assert pack_uri.idx == expected_idx
 
-    def it_can_calculate_membername(self):
+    def it_can_calculate_membername(self) -> None:
         expected_values = (
             "",
             "ppt/presentation.xml",
@@ -61,7 +67,7 @@ class DescribePackURI:
         for pack_uri, expected_membername in self.cases(expected_values):
             assert pack_uri.membername == expected_membername
 
-    def it_can_calculate_relative_ref_value(self):
+    def it_can_calculate_relative_ref_value(self) -> None:
         cases = (
             ("/", "/ppt/presentation.xml", "ppt/presentation.xml"),
             (
@@ -79,7 +85,7 @@ class DescribePackURI:
             pack_uri = PackURI(uri_str)
             assert pack_uri.relative_ref(baseURI) == expected_relative_ref
 
-    def it_can_calculate_rels_uri(self):
+    def it_can_calculate_rels_uri(self) -> None:
         expected_values = (
             "/_rels/.rels",
             "/ppt/_rels/presentation.xml.rels",

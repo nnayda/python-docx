@@ -1,7 +1,13 @@
+# pyright: reportPrivateUsage=false
+
 """Test suite for docx.opc.phys_pkg module."""
+
+from __future__ import annotations
 
 import hashlib
 import io
+import os
+from typing import TYPE_CHECKING, Iterator, cast
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
@@ -17,7 +23,10 @@ from docx.opc.phys_pkg import (
 )
 
 from ..unitutil.file import absjoin, test_file_dir
-from ..unitutil.mock import Mock, class_mock, loose_mock
+from ..unitutil.mock import FixtureRequest, Mock, class_mock, loose_mock
+
+if TYPE_CHECKING:
+    from _pytest._py.path import LocalPath
 
 test_docx_path = absjoin(test_file_dir, "test.docx")
 dir_pkg_path = absjoin(test_file_dir, "expanded_docx")
@@ -25,29 +34,32 @@ zip_pkg_path = test_docx_path
 
 
 class DescribeDirPkgReader:
-    def it_is_used_by_PhysPkgReader_when_pkg_is_a_dir(self):
+    def it_is_used_by_PhysPkgReader_when_pkg_is_a_dir(self) -> None:
         phys_reader = PhysPkgReader(dir_pkg_path)
         assert isinstance(phys_reader, _DirPkgReader)
 
-    def it_doesnt_mind_being_closed_even_though_it_doesnt_need_it(self, dir_reader):
+    def it_doesnt_mind_being_closed_even_though_it_doesnt_need_it(
+        self, dir_reader: _DirPkgReader
+    ) -> None:
         dir_reader.close()
 
-    def it_can_retrieve_the_blob_for_a_pack_uri(self, dir_reader):
+    def it_can_retrieve_the_blob_for_a_pack_uri(self, dir_reader: _DirPkgReader) -> None:
         pack_uri = PackURI("/word/document.xml")
         blob = dir_reader.blob_for(pack_uri)
         sha1 = hashlib.sha1(blob).hexdigest()
         assert sha1 == "0e62d87ea74ea2b8088fd11ee97b42da9b4c77b0"
 
-    def it_can_get_the_content_types_xml(self, dir_reader):
+    def it_can_get_the_content_types_xml(self, dir_reader: _DirPkgReader) -> None:
         sha1 = hashlib.sha1(dir_reader.content_types_xml).hexdigest()
         assert sha1 == "89aadbb12882dd3d7340cd47382dc2c73d75dd81"
 
-    def it_can_retrieve_the_rels_xml_for_a_source_uri(self, dir_reader):
+    def it_can_retrieve_the_rels_xml_for_a_source_uri(self, dir_reader: _DirPkgReader) -> None:
         rels_xml = dir_reader.rels_xml_for(PACKAGE_URI)
+        assert rels_xml is not None
         sha1 = hashlib.sha1(rels_xml).hexdigest()
         assert sha1 == "ebacdddb3e7843fdd54c2f00bc831551b26ac823"
 
-    def it_returns_none_when_part_has_no_rels_xml(self, dir_reader):
+    def it_returns_none_when_part_has_no_rels_xml(self, dir_reader: _DirPkgReader) -> None:
         partname = PackURI("/ppt/viewProps.xml")
         rels_xml = dir_reader.rels_xml_for(partname)
         assert rels_xml is None
@@ -55,59 +67,60 @@ class DescribeDirPkgReader:
     # fixtures ---------------------------------------------
 
     @pytest.fixture
-    def pkg_file_(self, request):
+    def pkg_file_(self, request: FixtureRequest) -> Mock:
         return loose_mock(request)
 
     @pytest.fixture(scope="class")
-    def dir_reader(self):
-        return _DirPkgReader(dir_pkg_path)
+    def dir_reader(self) -> _DirPkgReader:
+        return cast(_DirPkgReader, _DirPkgReader(dir_pkg_path))
 
 
 class DescribePhysPkgReader:
-    def it_raises_when_pkg_path_is_not_a_package(self):
+    def it_raises_when_pkg_path_is_not_a_package(self) -> None:
         with pytest.raises(PackageNotFoundError):
             PhysPkgReader("foobar")
 
 
 class DescribeZipPkgReader:
-    def it_is_used_by_PhysPkgReader_when_pkg_is_a_zip(self):
+    def it_is_used_by_PhysPkgReader_when_pkg_is_a_zip(self) -> None:
         phys_reader = PhysPkgReader(zip_pkg_path)
         assert isinstance(phys_reader, _ZipPkgReader)
 
-    def it_is_used_by_PhysPkgReader_when_pkg_is_a_stream(self):
+    def it_is_used_by_PhysPkgReader_when_pkg_is_a_stream(self) -> None:
         with open(zip_pkg_path, "rb") as stream:
             phys_reader = PhysPkgReader(stream)
         assert isinstance(phys_reader, _ZipPkgReader)
 
-    def it_opens_pkg_file_zip_on_construction(self, ZipFile_, pkg_file_):
+    def it_opens_pkg_file_zip_on_construction(self, ZipFile_: Mock, pkg_file_: Mock) -> None:
         _ZipPkgReader(pkg_file_)
         ZipFile_.assert_called_once_with(pkg_file_, "r")
 
-    def it_can_be_closed(self, ZipFile_):
+    def it_can_be_closed(self, ZipFile_: Mock) -> None:
         # mockery ----------------------
         zipf = ZipFile_.return_value
-        zip_pkg_reader = _ZipPkgReader(None)
+        zip_pkg_reader = _ZipPkgReader(None)  # pyright: ignore[reportArgumentType]
         # exercise ---------------------
         zip_pkg_reader.close()
         # verify -----------------------
         zipf.close.assert_called_once_with()
 
-    def it_can_retrieve_the_blob_for_a_pack_uri(self, phys_reader):
+    def it_can_retrieve_the_blob_for_a_pack_uri(self, phys_reader: _ZipPkgReader) -> None:
         pack_uri = PackURI("/word/document.xml")
         blob = phys_reader.blob_for(pack_uri)
         sha1 = hashlib.sha1(blob).hexdigest()
         assert sha1 == "b9b4a98bcac7c5a162825b60c3db7df11e02ac5f"
 
-    def it_has_the_content_types_xml(self, phys_reader):
+    def it_has_the_content_types_xml(self, phys_reader: _ZipPkgReader) -> None:
         sha1 = hashlib.sha1(phys_reader.content_types_xml).hexdigest()
         assert sha1 == "cd687f67fd6b5f526eedac77cf1deb21968d7245"
 
-    def it_can_retrieve_rels_xml_for_source_uri(self, phys_reader):
+    def it_can_retrieve_rels_xml_for_source_uri(self, phys_reader: _ZipPkgReader) -> None:
         rels_xml = phys_reader.rels_xml_for(PACKAGE_URI)
+        assert rels_xml is not None
         sha1 = hashlib.sha1(rels_xml).hexdigest()
         assert sha1 == "90965123ed2c79af07a6963e7cfb50a6e2638565"
 
-    def it_returns_none_when_part_has_no_rels_xml(self, phys_reader):
+    def it_returns_none_when_part_has_no_rels_xml(self, phys_reader: _ZipPkgReader) -> None:
         partname = PackURI("/ppt/viewProps.xml")
         rels_xml = phys_reader.rels_xml_for(partname)
         assert rels_xml is None
@@ -115,36 +128,36 @@ class DescribeZipPkgReader:
     # fixtures ---------------------------------------------
 
     @pytest.fixture(scope="class")
-    def phys_reader(self):
-        phys_reader = _ZipPkgReader(zip_pkg_path)
+    def phys_reader(self) -> Iterator[_ZipPkgReader]:
+        phys_reader = cast(_ZipPkgReader, _ZipPkgReader(zip_pkg_path))
         yield phys_reader
         phys_reader.close()
 
     @pytest.fixture
-    def pkg_file_(self, request):
+    def pkg_file_(self, request: FixtureRequest) -> Mock:
         return loose_mock(request)
 
 
 class DescribeZipPkgWriter:
-    def it_is_used_by_PhysPkgWriter_unconditionally(self, tmp_docx_path):
+    def it_is_used_by_PhysPkgWriter_unconditionally(self, tmp_docx_path: str) -> None:
         phys_writer = PhysPkgWriter(tmp_docx_path)
         assert isinstance(phys_writer, _ZipPkgWriter)
 
-    def it_opens_pkg_file_zip_on_construction(self, ZipFile_):
+    def it_opens_pkg_file_zip_on_construction(self, ZipFile_: Mock) -> None:
         pkg_file = Mock(name="pkg_file")
         _ZipPkgWriter(pkg_file)
         ZipFile_.assert_called_once_with(pkg_file, "w", compression=ZIP_DEFLATED)
 
-    def it_can_be_closed(self, ZipFile_):
+    def it_can_be_closed(self, ZipFile_: Mock) -> None:
         # mockery ----------------------
         zipf = ZipFile_.return_value
-        zip_pkg_writer = _ZipPkgWriter(None)
+        zip_pkg_writer = _ZipPkgWriter(None)  # pyright: ignore[reportArgumentType]
         # exercise ---------------------
         zip_pkg_writer.close()
         # verify -----------------------
         zipf.close.assert_called_once_with()
 
-    def it_can_write_a_blob(self, pkg_file):
+    def it_can_write_a_blob(self, pkg_file: io.BytesIO) -> None:
         # setup ------------------------
         pack_uri = PackURI("/part/name.xml")
         blob = "<BlobbityFooBlob/>".encode("utf-8")
@@ -163,7 +176,7 @@ class DescribeZipPkgWriter:
     # fixtures ---------------------------------------------
 
     @pytest.fixture
-    def pkg_file(self):
+    def pkg_file(self) -> Iterator[io.BytesIO]:
         pkg_file = io.BytesIO()
         yield pkg_file
         pkg_file.close()
@@ -173,10 +186,10 @@ class DescribeZipPkgWriter:
 
 
 @pytest.fixture
-def tmp_docx_path(tmpdir):
-    return str(tmpdir.join("test_python-docx.docx"))
+def tmp_docx_path(tmpdir: LocalPath) -> str:
+    return os.path.join(str(tmpdir), "test_python-docx.docx")
 
 
 @pytest.fixture
-def ZipFile_(request):
+def ZipFile_(request: FixtureRequest) -> Mock:
     return class_mock(request, "docx.opc.phys_pkg.ZipFile")

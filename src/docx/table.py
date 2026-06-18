@@ -16,8 +16,17 @@ from docx.shared import Inches, Parented, StoryChild, lazyproperty
 if TYPE_CHECKING:
     import docx.types as t
     from docx.enum.table import WD_ROW_HEIGHT_RULE, WD_TABLE_ALIGNMENT, WD_TABLE_DIRECTION
-    from docx.oxml.table import CT_Row, CT_Tbl, CT_TblPr, CT_Tc
-    from docx.shared import Length
+    from docx.oxml.table import (
+        CT_Border,
+        CT_Row,
+        CT_Tbl,
+        CT_TblBorders,
+        CT_TblPr,
+        CT_Tc,
+        CT_TcBorders,
+        CT_TrPr,
+    )
+    from docx.shared import Length, RGBColor
     from docx.styles.style import (
         ParagraphStyle,
         _TableStyle,  # pyright: ignore[reportPrivateUsage]
@@ -318,12 +327,12 @@ class _Cell(BlockItemContainer):
         self._tc.width = value
 
     @property
-    def bg_color(self):
+    def bg_color(self) -> RGBColor | str | None:
         """The background color of the cell."""
         return self._tc.bg_color
 
     @bg_color.setter
-    def bg_color(self, value):
+    def bg_color(self, value: RGBColor | str | None):
         self._tc.bg_color = value
 
     @lazyproperty
@@ -367,28 +376,38 @@ class _Column(Parented):
         return self._gridCol.gridCol_idx
 
     @property
-    def dont_split(self):
+    def dont_split(self) -> bool | None:
         return self._get_bool_prop("cantSplit")
 
     @dont_split.setter
-    def dont_split(self, value):
+    def dont_split(self, value: bool | None):
         self._set_bool_prop("cantSplit", value)
 
-    def _get_bool_prop(self, name):
+    def _get_bool_prop(self, name: str) -> bool | None:
         """
         Return the value of boolean child of `w:trPr` having *name*.
         """
-        trPr = self._element.trPr
+        # -- NOTE: `_Column` has no `_element`; this references row-level `w:trPr` and
+        # -- is pre-existing (untested) fork code that would raise at runtime. --
+        element = cast(
+            "CT_Row",
+            self._element,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
+        )
+        trPr: CT_TrPr | None = element.trPr
         if trPr is None:
             return None
-        return trPr._get_bool_val(name)
+        return trPr._get_bool_val(name)  # pyright: ignore[reportPrivateUsage]
 
-    def _set_bool_prop(self, name, value):
+    def _set_bool_prop(self, name: str, value: bool | None):
         """
         Assign *value* to the boolean child *name* of `w:trPr`.
         """
-        trPr = self._element.get_or_add_trPr()
-        trPr._set_bool_val(name, value)
+        element = cast(
+            "CT_Row",
+            self._element,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType]
+        )
+        trPr = element.get_or_add_trPr()
+        trPr._set_bool_val(name, value)  # pyright: ignore[reportPrivateUsage]
 
 
 class _Columns(Parented):
@@ -585,17 +604,18 @@ class _Rows(Parented):
 
 
 class _Border(Parented):
-    def __init__(self, name, cb, parent):
+    def __init__(self, name: str, cb: CT_Border, parent: _CellBorders | _TblBorders):
         super(_Border, self).__init__(parent)
+        self._parent = parent
         self._name = name
         self._cb = self._element = cb
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @name.setter
-    def name(self, value):
+    def name(self, value: str | None):
         if value is None:
             self._parent.remove_border(self.name)
             return
@@ -605,46 +625,46 @@ class _Border(Parented):
         )
 
     @property
-    def line(self):
+    def line(self) -> str:
         return self._cb.val
 
     @line.setter
-    def line(self, value):
+    def line(self, value: str | None):
         if value is None:
-            self._cb._remove_val()
+            self._cb._remove_val()  # pyright: ignore[reportPrivateUsage]
             return
         self._cb.val = value
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self._cb.sz
 
     @size.setter
-    def size(self, value):
+    def size(self, value: int | None):
         if value is None:
-            self._cb._remove_sz()
+            self._cb._remove_sz()  # pyright: ignore[reportPrivateUsage]
             return
         self._cb.sz = value
 
     @property
-    def space(self):
+    def space(self) -> int:
         return self._cb.space
 
     @space.setter
-    def space(self, value):
+    def space(self, value: int | None):
         if value is None:
-            self._cb._remove_space()
+            self._cb._remove_space()  # pyright: ignore[reportPrivateUsage]
             return
         self._cb.space = value
 
     @property
-    def color(self):
+    def color(self) -> RGBColor | str:
         return self._cb.color
 
     @color.setter
-    def color(self, value):
+    def color(self, value: RGBColor | str | None):
         if value is None:
-            self._cb._remove_color()
+            self._cb._remove_color()  # pyright: ignore[reportPrivateUsage]
             return
         self._cb.color = value
 
@@ -655,21 +675,22 @@ class _CellBorders(Parented):
     Supports ``len()``, iteration, indexed access, and slicing.
     """
 
-    def __init__(self, cell, parent):
+    def __init__(self, cell: CT_Tc, parent: _Cell):
         super(_CellBorders, self).__init__(parent)
+        self._parent = parent
         self._cell = cell
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> _Border:
         return list(self)[idx]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[_Border]:
         return (_Border(name, cb, self) for name, cb in self._borders.items())
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._borders)
 
     @property
-    def _tcBorders(self):
+    def _tcBorders(self) -> CT_TcBorders | None:
         tcPr = self._cell.tcPr
         if tcPr is None:
             return None
@@ -679,31 +700,36 @@ class _CellBorders(Parented):
         return tcBorders
 
     @property
-    def _borders(self):
+    def _borders(self) -> dict[str, CT_Border]:
         tcBorders = self._tcBorders
         if tcBorders is None:
             return {}
         return tcBorders.as_dict
 
     @property
-    def table(self):
+    def table(self) -> Table:
         """
         Reference to the |Table| object this row collection belongs to.
         """
-        return self._parent.table
+        # -- NOTE: `_Cell` (a `BlockItemContainer`) exposes no `.table`; this is
+        # -- pre-existing (untested) fork code that would raise at runtime. --
+        return self._parent.table  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType, reportUnknownVariableType]
 
-    def add_border(self, name, line, sz=None, space=None, color=None):
+    def add_border(
+        self,
+        name: str,
+        line: str,
+        sz: int | None = None,
+        space: int | None = None,
+        color: RGBColor | str | None = None,
+    ) -> _Border | None:
         tcPr = self._cell.get_or_add_tcPr()
-        if tcPr is None:
-            return None
         tcBorders = tcPr.get_or_add_tcBorders()
-        if tcBorders is None:
-            return None
         brd = tcBorders.add_border(name, line, sz=sz, space=space, color=color)
         if brd is not None:
             return _Border(name, brd, self)
 
-    def remove_border(self, border_name):
+    def remove_border(self, border_name: str) -> None:
         tcBorders = self._tcBorders
         if tcBorders is None:
             return None
@@ -718,53 +744,57 @@ class _TblBorders(Parented):
     Supports ``len()``, iteration, indexed access, and slicing.
     """
 
-    def __init__(self, tbl, parent):
+    def __init__(self, tbl: CT_Tbl, parent: Table):
         super(_TblBorders, self).__init__(parent)
+        self._parent = parent
         self._tbl = tbl
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> _Border:
         return list(self)[idx]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[_Border]:
         return (_Border(name, brd, self) for name, brd in self._borders.items())
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._borders)
 
     @property
-    def _tblBorders(self):
+    def _tblBorders(self) -> CT_TblBorders | None:
         tblPr = self._tbl.tblPr
-        if tblPr is None:
-            return None
         tblBorders = tblPr.tblBorders
         if tblBorders is None:
             return None
         return tblBorders
 
     @property
-    def _borders(self):
+    def _borders(self) -> dict[str, CT_Border]:
         tblBorders = self._tblBorders
         if tblBorders is None:
             return {}
         return tblBorders.as_dict
 
     @property
-    def table(self):
+    def table(self) -> Table:
         """
         Reference to the |Table| object this row collection belongs to.
         """
         return self._parent.table
 
-    def add_border(self, name, line, sz=None, space=None, color=None):
+    def add_border(
+        self,
+        name: str,
+        line: str,
+        sz: int | None = None,
+        space: int | None = None,
+        color: RGBColor | str | None = None,
+    ) -> _Border | None:
         tblPr = self._tbl.tblPr
         tblBorders = tblPr.get_or_add_tblBorders()
-        if tblBorders is None:
-            return None
         brd = tblBorders.add_border(name, line, sz=sz, space=space, color=color)
         if brd is not None:
             return _Border(name, brd, self)
 
-    def remove_border(self, border_name):
+    def remove_border(self, border_name: str) -> None:
         tblBorders = self._tblBorders
         if tblBorders is None:
             return None

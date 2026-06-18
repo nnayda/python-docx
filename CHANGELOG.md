@@ -27,3 +27,21 @@ For the release history inherited from upstream
 
 - Documentation now builds with modern Sphinx and the Furo theme and is
   published to GitHub Pages.
+- The full source tree and test suite now pass `pyright` in strict mode with
+  zero errors. The CI `typecheck` job is now blocking (previously
+  non-blocking), so new type errors fail the build. Minimum `pyright` bumped to
+  `1.1.410`.
+
+### Fixed
+
+- `Document.add_comment` now normalizes a `None` `text` argument to an empty
+  string instead of forwarding `None`.
+- `OpcPackage.walk_parts` no longer uses a mutable default argument for its
+  visited-parts accumulator.
+- `BaseStyle` property accessors read from the always-present style element so
+  they no longer mis-handle the post-`delete()` state.
+- `tests/oxml/unitdata/numbering.py` `CT_NumBuilder.__attrs__` is now the
+  intended one-tuple `("w:numId",)` rather than a bare string.
+- Assigning `None` to `_Cell.bg_color` (or the underlying `CT_Tc`/`CT_TcPr`
+  `bg_color`) now clears cell shading instead of raising `ValueError`, matching
+  the getter, which already returns `None` for an unshaded cell.

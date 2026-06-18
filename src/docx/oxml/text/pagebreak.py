@@ -164,7 +164,9 @@ class CT_LastRenderedPageBreak(BaseOxmlElement):
             p.remove(e)
 
         # -- remove the whole hyperlink, it belongs to the preceding-fragment-p --
-        hyperlink.getparent().remove(hyperlink)
+        hyperlink_parent = hyperlink.getparent()
+        assert hyperlink_parent is not None
+        hyperlink_parent.remove(hyperlink)
 
         # -- that's it, return the remaining fragment of `w:p` clone --
         return p
@@ -228,7 +230,9 @@ class CT_LastRenderedPageBreak(BaseOxmlElement):
             p.remove(e)
 
         # -- remove this page-break from inside the hyperlink --
-        lrpb.getparent().remove(lrpb)
+        lrpb_parent = lrpb.getparent()
+        assert lrpb_parent is not None
+        lrpb_parent.remove(lrpb)
 
         # -- that's it, the entire hyperlink goes into the preceding fragment so
         # -- the hyperlink is not "split".

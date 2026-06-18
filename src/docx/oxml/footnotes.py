@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 class CT_Footnotes(BaseOxmlElement):
     """`<w:footnotes>` element, the root of the footnotes part."""
 
+    _add_footnote: Callable[..., "CT_FtnEdn"]
     footnote_lst: List["CT_FtnEdn"]
 
     footnote = ZeroOrMore("w:footnote")
@@ -53,8 +54,8 @@ class CT_FtnEdn(BaseOxmlElement):
     add_p: Callable[[], "CT_P"]
     p_lst: List["CT_P"]
 
-    id: int = RequiredAttribute("w:id", ST_DecimalNumber)  # pyright: ignore[reportGeneralTypeIssues,reportAssignmentType]
-    type: str | None = OptionalAttribute("w:type", ST_String)  # pyright: ignore[reportGeneralTypeIssues,reportAssignmentType]
+    id: int = RequiredAttribute("w:id", ST_DecimalNumber)  # pyright: ignore[reportAssignmentType]
+    type: str | None = OptionalAttribute("w:type", ST_String)  # pyright: ignore[reportAssignmentType]
 
     p = ZeroOrMore("w:p")
 
@@ -62,7 +63,7 @@ class CT_FtnEdn(BaseOxmlElement):
 class CT_FtnEdnRef(BaseOxmlElement):
     """`<w:footnoteReference>` element, the in-text marker linking to a footnote."""
 
-    id: int = RequiredAttribute("w:id", ST_DecimalNumber)  # pyright: ignore[reportGeneralTypeIssues,reportAssignmentType]
+    id: int = RequiredAttribute("w:id", ST_DecimalNumber)  # pyright: ignore[reportAssignmentType]
 
 
 class CT_Empty(BaseOxmlElement):

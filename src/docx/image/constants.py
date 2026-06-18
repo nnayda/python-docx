@@ -1,5 +1,7 @@
 """Constants specific the the image sub-package."""
 
+from __future__ import annotations
+
 
 class JPEG_MARKER_CODE:
     """JPEG marker codes."""
@@ -93,7 +95,7 @@ class JPEG_MARKER_CODE:
     }
 
     @classmethod
-    def is_standalone(cls, marker_code):
+    def is_standalone(cls, marker_code: bytes) -> bool:
         return marker_code in cls.STANDALONE_MARKERS
 
 

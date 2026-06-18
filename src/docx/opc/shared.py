@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, TypeVar
-
-_T = TypeVar("_T")
+from typing import Any, Dict
 
 
 class CaseInsensitiveDict(Dict[str, Any]):
@@ -16,13 +14,15 @@ class CaseInsensitiveDict(Dict[str, Any]):
     passed in constructor are not accounted for
     """
 
-    def __contains__(self, key):
+    def __contains__(self, key: object) -> bool:
+        if not isinstance(key, str):
+            return False
         return super(CaseInsensitiveDict, self).__contains__(key.lower())
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Any:
         return super(CaseInsensitiveDict, self).__getitem__(key.lower())
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         return super(CaseInsensitiveDict, self).__setitem__(key.lower(), value)
 
 
