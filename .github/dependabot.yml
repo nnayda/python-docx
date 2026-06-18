@@ -1,6 +1,7 @@
 version: 2
 updates:
-  - package-ecosystem: pip
+  # uv ecosystem keeps uv.lock (and pyproject dependency groups) up to date.
+  - package-ecosystem: uv
     directory: /
     schedule:
       interval: weekly

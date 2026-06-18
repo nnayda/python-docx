@@ -33,6 +33,18 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Verify tag matches package version
+        # The built version comes from src/docx/__init__.py, not the tag.
+        # Fail fast if they disagree so we never publish a wrong/duplicate version.
+        run: |
+          PKG_VERSION="$(grep -oE '__version__ = "[^"]+"' src/docx/__init__.py | cut -d'"' -f2)"
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "package __version__=$PKG_VERSION, release tag=$TAG"
+          if [ "$PKG_VERSION" != "$TAG" ]; then
+            echo "::error::Release tag ($TAG) does not match src/docx/__init__.py __version__ ($PKG_VERSION). Bump the version before tagging."
+            exit 1
+          fi
+
       - name: Build sdist and wheel
         run: uv build
 
