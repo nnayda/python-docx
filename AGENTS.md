@@ -71,6 +71,14 @@ the wrong direction.
   diverge from `python-openxml/python-docx`, so upstream fixes keep merging
   cleanly. Fork-specific metadata lives in `pyproject.toml`, `README.md`, and
   `CHANGELOG.md`.
+- **Opening PRs (fine-grained PAT quirk):** `gh pr create` may fail with
+  `Resource not accessible by personal access token` even though `gh` is
+  authenticated. The fine-grained PAT used in CI/automation is rejected on
+  GitHub's GraphQL `createPullRequest` mutation but the REST endpoint works.
+  Create PRs with the REST API instead:
+  `gh api -X POST repos/nnayda/python-docx/pulls -f title=... -f head=<branch> -f base=main -f body=...`.
+  More generally, when a PAT rejects a `gh` subcommand, retry the equivalent
+  `gh api` (REST) call before assuming the token lacks the permission.
 
 ## Working with upstream
 
