@@ -47,7 +47,7 @@ dev = [
 ]
 
 [project.urls]
-Changelog = "https://github.com/nnayda/python-docx/blob/master/CHANGELOG.md"
+Changelog = "https://github.com/nnayda/python-docx/blob/main/CHANGELOG.md"
 Documentation = "https://nnayda.github.io/python-docx/"
 Homepage = "https://github.com/nnayda/python-docx"
 Repository = "https://github.com/nnayda/python-docx"

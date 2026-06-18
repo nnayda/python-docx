@@ -48,7 +48,7 @@ a useful reference at <https://python-docx.readthedocs.org/en/latest/>.
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) for setup,
 conventions, and the development workflow. This fork uses
 [Conventional Commits](https://www.conventionalcommits.org/) for PR titles and
-squash-merges to `master`.
+squash-merges to `main`.
 
 ## License
 

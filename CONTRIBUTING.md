@@ -29,7 +29,7 @@ See [AGENTS.md](AGENTS.md) for the full command list and repository layout.
 - PR titles must follow [Conventional Commits](https://www.conventionalcommits.org/)
   (`feat: …`, `fix: …`, `docs: …`, `chore: …`, `refactor: …`, `test: …`,
   `ci: …`, `perf: …`, `build: …`). CI enforces this; PRs are **squash-merged**,
-  so the PR title becomes the commit message on `master`.
+  so the PR title becomes the commit message on `main`.
 - Add or update tests for behavior you add or change.
 - CI must be green before merge: `ruff` (lint + format), `pyright`, `pytest`,
   and `behave`.
@@ -54,7 +54,7 @@ uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run 
 
 1. Bump `__version__` in `src/docx/__init__.py`.
 2. Update `CHANGELOG.md`.
-3. Merge to `master`, then create a GitHub Release with tag `vX.Y.Z`.
+3. Merge to `main`, then create a GitHub Release with tag `vX.Y.Z`.
 4. The release workflow builds the sdist/wheel and publishes to PyPI via
    trusted publishing.
 
