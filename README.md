@@ -1,11 +1,25 @@
-# python-docx
+# python-docx-nnayda
 
-*python-docx* is a Python library for reading, creating, and updating Microsoft Word 2007+ (.docx) files.
+[![CI](https://github.com/nnayda/python-docx/actions/workflows/ci.yml/badge.svg)](https://github.com/nnayda/python-docx/actions/workflows/ci.yml)
+[![Docs](https://github.com/nnayda/python-docx/actions/workflows/docs.yml/badge.svg)](https://nnayda.github.io/python-docx/)
+[![PyPI](https://img.shields.io/pypi/v/python-docx-nnayda.svg)](https://pypi.org/project/python-docx-nnayda/)
+[![Python versions](https://img.shields.io/pypi/pyversions/python-docx-nnayda.svg)](https://pypi.org/project/python-docx-nnayda/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+*python-docx-nnayda* is a maintained fork of
+[python-docx](https://github.com/python-openxml/python-docx) — a Python library
+for reading, creating, and updating Microsoft Word 2007+ (.docx) files.
+
+> **Fork note:** this package installs as `python-docx-nnayda` but the import
+> name is unchanged (`import docx`), so it remains a drop-in replacement. It
+> adds fork-specific features (footnotes, hyperlink creation, table styling)
+> on top of upstream. Install only one of `python-docx` or
+> `python-docx-nnayda` into an environment, not both.
 
 ## Installation
 
 ```
-pip install python-docx
+pip install python-docx-nnayda
 ```
 
 ## Example
@@ -23,4 +37,20 @@ pip install python-docx
 'It was a dark and stormy night.'
 ```
 
-More information is available in the [python-docx documentation](https://python-docx.readthedocs.org/en/latest/)
+## Documentation
+
+Documentation for this fork is published at
+<https://nnayda.github.io/python-docx/>. The upstream documentation also remains
+a useful reference at <https://python-docx.readthedocs.org/en/latest/>.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) for setup,
+conventions, and the development workflow. This fork uses
+[Conventional Commits](https://www.conventionalcommits.org/) for PR titles and
+squash-merges to `master`.
+
+## License
+
+MIT — see [LICENSE](LICENSE). This fork preserves the upstream license and
+authorship.

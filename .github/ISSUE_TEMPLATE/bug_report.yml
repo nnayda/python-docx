@@ -1,0 +1,46 @@
+name: Bug report
+description: Something doesn't work the way it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: |
+        1. Opened a document with Document("example.docx")
+        2. Called document.add_table(...)
+        3. Expected …; instead got …
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: A small, self-contained snippet that reproduces the issue. Redact any sensitive content.
+      render: python
+
+  - type: input
+    id: version
+    attributes:
+      label: python-docx-nnayda version
+      description: Output of `pip show python-docx-nnayda` (or the commit hash if installed from source).
+      placeholder: 1.2.0
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version and OS
+      placeholder: Python 3.12 on macOS 15.5
+    validations:
+      required: true
+
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback / output
+      description: Any relevant error output.
+      render: text

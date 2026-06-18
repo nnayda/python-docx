@@ -77,6 +77,8 @@ rst_epilog = """
 
 .. |_Body| replace:: :class:`._Body`
 
+.. |_Borders| replace:: :class:`._Borders`
+
 .. |_Cell| replace:: :class:`._Cell`
 
 .. |_CharacterStyle| replace:: :class:`.CharacterStyle`
@@ -112,6 +114,8 @@ rst_epilog = """
 .. |float| replace:: :class:`.float`
 
 .. |Font| replace:: :class:`.Font`
+
+.. |Footnote| replace:: :class:`.Footnote`
 
 .. |_Footer| replace:: :class:`._Footer`
 
@@ -233,15 +237,16 @@ pygments_style = "sphinx"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "armstrong"
+#
+# This fork builds with the modern Furo theme (the original "armstrong" theme
+# in docs/_themes/ is incompatible with current Sphinx). Furo ships its own
+# sidebar, so the custom html_sidebars override below is left disabled.
+html_theme = "furo"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 # html_theme_options = {}
-
-# Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = ["_themes"]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -273,8 +278,8 @@ html_static_path = ["_static"]
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-# html_sidebars = {}
-html_sidebars = {"**": ["localtoc.html", "relations.html", "sidebarlinks.html", "searchbox.html"]}
+# -- Furo provides its own sidebar; the armstrong-era override is disabled. --
+# html_sidebars = {"**": ["localtoc.html", "relations.html", "sidebarlinks.html", "searchbox.html"]}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
@@ -390,4 +395,4 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {"http://docs.python.org/3/": None}
+intersphinx_mapping = {"python": ("https://docs.python.org/3/", None)}
