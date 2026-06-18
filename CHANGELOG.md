@@ -11,6 +11,10 @@ For the release history inherited from upstream
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-06-18
+
+First release of the fork published to PyPI as `python-docx-nnayda`.
+
 ### Added
 
 - Fork packaging and project infrastructure: published to PyPI as
