@@ -41,7 +41,9 @@ class Footnote(StoryChild):
         # -- assign the style id directly at the element level; the proxy `.style`
         # -- setter does a name-based lookup that would emit a deprecation warning for a
         # -- style id whose UI name differs ("footnote text" vs id "FootnoteText"). --
-        paragraph._p.style = FOOTNOTE_TEXT_STYLE_ID if style is None else style
+        paragraph._p.style = (  # pyright: ignore[reportPrivateUsage]
+            FOOTNOTE_TEXT_STYLE_ID if style is None else style
+        )
         if text:
             paragraph.add_run(text)
         return paragraph
@@ -78,7 +80,7 @@ class Footnote(StoryChild):
         `FootnoteReference` character style and a `<w:footnoteRef/>` element.
         """
         paragraph = self.add_paragraph()
-        paragraph._p.append(self._new_mark_run())
+        paragraph._p.append(self._new_mark_run())  # pyright: ignore[reportPrivateUsage]
         if text:
             paragraph.add_run(text)
 

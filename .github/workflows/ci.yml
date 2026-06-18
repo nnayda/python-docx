@@ -31,13 +31,10 @@ jobs:
         run: uv run ruff format --check .
 
   typecheck:
-    name: Type check (pyright, non-blocking)
+    name: Type check (pyright)
     runs-on: ubuntu-latest
-    # The pyright config aspires to strict mode, but a lot of the (forked)
-    # source predates full type annotations and does not yet pass. This job
-    # runs for signal but does not block merges; tighten it as the type debt
-    # is paid down, then drop continue-on-error.
-    continue-on-error: true
+    # The full source tree and test suite now pass pyright in strict mode, so
+    # this job is blocking. Keep it green: any new type error fails CI.
     steps:
       - uses: actions/checkout@v4
 

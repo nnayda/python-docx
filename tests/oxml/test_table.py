@@ -12,6 +12,7 @@ from docx.exceptions import InvalidSpanError
 from docx.oxml.parser import parse_xml
 from docx.oxml.table import CT_Row, CT_Tbl, CT_Tc
 from docx.oxml.text.paragraph import CT_P
+from docx.shared import RGBColor
 
 from ..unitutil.cxml import element, xml
 from ..unitutil.file import snippet_seq
@@ -58,6 +59,34 @@ class DescribeCT_Tc:
         tc = tr.tc_lst[tc_idx]
 
         assert tc.grid_offset == expected_value
+
+    @pytest.mark.parametrize(
+        ("tc_cxml", "new_value", "expected_cxml"),
+        [
+            # -- assigning a color writes a fully-specified w:shd --
+            (
+                "w:tc",
+                RGBColor.from_string("FF0000"),
+                "w:tc/w:tcPr/w:shd{w:val=clear,w:color=auto,w:fill=FF0000}",
+            ),
+            # -- assigning None clears existing shading rather than raising --
+            (
+                "w:tc/w:tcPr/w:shd{w:val=clear,w:color=auto,w:fill=FF0000}",
+                None,
+                "w:tc/w:tcPr",
+            ),
+            # -- assigning None when there is no shading is a no-op --
+            ("w:tc", None, "w:tc/w:tcPr"),
+        ],
+    )
+    def it_can_change_its_bg_color(
+        self, tc_cxml: str, new_value: RGBColor | None, expected_cxml: str
+    ):
+        tc = cast(CT_Tc, element(tc_cxml))
+
+        tc.bg_color = new_value
+
+        assert tc.xml == xml(expected_cxml)
 
     def it_can_merge_to_another_tc(
         self, tr_: Mock, _span_dimensions_: Mock, _tbl_: Mock, _grow_to_: Mock, top_tc_: Mock

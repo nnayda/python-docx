@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import IO
+
 from .constants import MIME_TYPE
 from .helpers import LITTLE_ENDIAN, StreamReader
 from .image import BaseImageHeader
@@ -7,7 +11,7 @@ class Bmp(BaseImageHeader):
     """Image header parser for BMP images."""
 
     @classmethod
-    def from_stream(cls, stream):
+    def from_stream(cls, stream: IO[bytes]) -> Bmp:
         """Return |Bmp| instance having header properties parsed from the BMP image in
         `stream`."""
         stream_rdr = StreamReader(stream, LITTLE_ENDIAN)
@@ -24,18 +28,18 @@ class Bmp(BaseImageHeader):
         return cls(px_width, px_height, horz_dpi, vert_dpi)
 
     @property
-    def content_type(self):
+    def content_type(self) -> str:
         """MIME content type for this image, unconditionally `image/bmp` for BMP
         images."""
         return MIME_TYPE.BMP
 
     @property
-    def default_ext(self):
+    def default_ext(self) -> str:
         """Default filename extension, always 'bmp' for BMP images."""
         return "bmp"
 
     @staticmethod
-    def _dpi(px_per_meter):
+    def _dpi(px_per_meter: int) -> int:
         """Return the integer pixels per inch from `px_per_meter`, defaulting to 96 if
         `px_per_meter` is zero."""
         if px_per_meter == 0:

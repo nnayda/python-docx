@@ -1,13 +1,19 @@
+# pyright: reportPrivateUsage=false
+
 """Test suite for docx.oxml.xmlchemy."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, List, cast
 
 import pytest
 
 from docx.oxml.exceptions import InvalidXmlError
 from docx.oxml.ns import qn
 from docx.oxml.parser import parse_xml, register_element_cls
+from docx.oxml.shared import BaseOxmlElement
 from docx.oxml.simpletypes import BaseIntType
 from docx.oxml.xmlchemy import (
-    BaseOxmlElement,
     Choice,
     OneAndOnlyOne,
     OneOrMore,
@@ -23,18 +29,27 @@ from docx.oxml.xmlchemy import (
 from ..unitdata import BaseBuilder
 from .unitdata.text import a_b, a_u, an_i, an_rPr
 
+if TYPE_CHECKING:
+    from lxml.etree import _Element
+
 
 class DescribeBaseOxmlElement:
-    def it_can_find_the_first_of_its_children_named_in_a_sequence(self, first_fixture):
+    def it_can_find_the_first_of_its_children_named_in_a_sequence(
+        self, first_fixture: tuple[BaseOxmlElement, list[str], _Element | None]
+    ) -> None:
         element, tagnames, matching_child = first_fixture
         assert element.first_child_found_in(*tagnames) is matching_child
 
-    def it_can_insert_an_element_before_named_successors(self, insert_fixture):
+    def it_can_insert_an_element_before_named_successors(
+        self, insert_fixture: tuple[BaseOxmlElement, BaseOxmlElement, list[str], str]
+    ) -> None:
         element, child, tagnames, expected_xml = insert_fixture
         element.insert_element_before(child, *tagnames)
         assert element.xml == expected_xml
 
-    def it_can_remove_all_children_with_name_in_sequence(self, remove_fixture):
+    def it_can_remove_all_children_with_name_in_sequence(
+        self, remove_fixture: tuple[BaseOxmlElement, list[str], str]
+    ) -> None:
         element, tagnames, expected_xml = remove_fixture
         element.remove_all(*tagnames)
         assert element.xml == expected_xml
@@ -51,8 +66,10 @@ class DescribeBaseOxmlElement:
             ("", "biu", None),
         ]
     )
-    def first_fixture(self, request):
-        present, matching, match = request.param
+    def first_fixture(
+        self, request: pytest.FixtureRequest
+    ) -> tuple[BaseOxmlElement, list[str], _Element | None]:
+        present, matching, match = cast("tuple[str, str, str | None]", request.param)
         element = self.rPr_bldr(present).element
         tagnames = self.nsptags(matching)
         matching_child = element.find(qn("w:%s" % match)) if match else None
@@ -67,8 +84,10 @@ class DescribeBaseOxmlElement:
             ("bi", "u", "", "biu"),
         ]
     )
-    def insert_fixture(self, request):
-        present, new, successors, after = request.param
+    def insert_fixture(
+        self, request: pytest.FixtureRequest
+    ) -> tuple[BaseOxmlElement, BaseOxmlElement, list[str], str]:
+        present, new, successors, after = cast("tuple[str, str, str, str]", request.param)
         element = self.rPr_bldr(present).element
         child = {"b": a_b(), "i": an_i(), "u": a_u()}[new].with_nsdecls().element
         tagnames = [("w:%s" % char) for char in successors]
@@ -90,8 +109,10 @@ class DescribeBaseOxmlElement:
             ("", "ui", ""),
         ]
     )
-    def remove_fixture(self, request):
-        present, remove, after = request.param
+    def remove_fixture(
+        self, request: pytest.FixtureRequest
+    ) -> tuple[BaseOxmlElement, list[str], str]:
+        present, remove, after = cast("tuple[str, str, str]", request.param)
         element = self.rPr_bldr(present).element
         tagnames = self.nsptags(remove)
         expected_xml = self.rPr_bldr(after).xml()
@@ -99,10 +120,10 @@ class DescribeBaseOxmlElement:
 
     # fixture components ---------------------------------------------
 
-    def nsptags(self, letters):
+    def nsptags(self, letters: str) -> list[str]:
         return [("w:%s" % letter) for letter in letters]
 
-    def rPr_bldr(self, children):
+    def rPr_bldr(self, children: str) -> BaseBuilder:
         rPr_bldr = an_rPr().with_nsdecls()
         for char in children:
             if char == "b":
@@ -117,12 +138,12 @@ class DescribeBaseOxmlElement:
 
 
 class DescribeSerializeForReading:
-    def it_pretty_prints_an_lxml_element(self, pretty_fixture):
+    def it_pretty_prints_an_lxml_element(self, pretty_fixture: tuple[BaseOxmlElement, str]) -> None:
         element, expected_xml_text = pretty_fixture
         xml_text = serialize_for_reading(element)
         assert xml_text == expected_xml_text
 
-    def it_returns_unicode_text(self, type_fixture):
+    def it_returns_unicode_text(self, type_fixture: BaseOxmlElement) -> None:
         element = type_fixture
         xml_text = serialize_for_reading(element)
         assert isinstance(xml_text, str)
@@ -130,23 +151,26 @@ class DescribeSerializeForReading:
     # fixtures ---------------------------------------------
 
     @pytest.fixture
-    def pretty_fixture(self, element):
+    def pretty_fixture(self, element: BaseOxmlElement) -> tuple[BaseOxmlElement, str]:
         expected_xml_text = "<foø>\n  <bår>text</bår>\n</foø>\n"
         return element, expected_xml_text
 
     @pytest.fixture
-    def type_fixture(self, element):
+    def type_fixture(self, element: BaseOxmlElement) -> BaseOxmlElement:
         return element
 
     # fixture components -----------------------------------
 
     @pytest.fixture
-    def element(self):
+    def element(self) -> BaseOxmlElement:
         return parse_xml("<foø><bår>text</bår></foø>")
 
 
 class DescribeXmlString:
-    def it_parses_a_line_to_help_compare(self, parse_fixture):
+    def it_parses_a_line_to_help_compare(
+        self,
+        parse_fixture: tuple[str, str, str, str, str | None],
+    ) -> None:
         """
         This internal function is important to test separately because if it
         doesn't parse a line properly, false equality can result.
@@ -161,7 +185,7 @@ class DescribeXmlString:
         assert close == expected_close
         assert text == expected_text
 
-    def it_knows_if_two_xml_lines_are_equivalent(self, xml_line_case):
+    def it_knows_if_two_xml_lines_are_equivalent(self, xml_line_case: tuple[str, str, str]) -> None:
         line, other, differs = xml_line_case
         xml = XmlString(line)
         assert xml == other
@@ -184,8 +208,12 @@ class DescribeXmlString:
             ),
         ]
     )
-    def parse_fixture(self, request):
-        line, front, attrs, close, text = request.param
+    def parse_fixture(
+        self, request: pytest.FixtureRequest
+    ) -> tuple[str, str, str, str, str | None]:
+        line, front, attrs, close, text = cast(
+            "tuple[str, str, str, str, str | None]", request.param
+        )
         return line, front, attrs, close, text
 
     @pytest.fixture(
@@ -198,7 +226,7 @@ class DescribeXmlString:
             "closing_elm",
         ]
     )
-    def xml_line_case(self, request):
+    def xml_line_case(self, request: pytest.FixtureRequest) -> tuple[str, str, str]:
         cases = {
             "simple_elm": (
                 "<name/>",
@@ -231,34 +259,46 @@ class DescribeXmlString:
                 "<xyz:name>",
             ),
         }
-        line, other, differs = cases[request.param]
+        line, other, differs = cases[cast(str, request.param)]
         return line, other, differs
 
 
 class DescribeChoice:
-    def it_adds_a_getter_property_for_the_choice_element(self, getter_fixture):
+    def it_adds_a_getter_property_for_the_choice_element(
+        self, getter_fixture: tuple[CT_Parent, _Element | None]
+    ) -> None:
         parent, expected_choice = getter_fixture
         assert parent.choice is expected_choice
 
-    def it_adds_a_creator_method_for_the_child_element(self, new_fixture):
+    def it_adds_a_creator_method_for_the_child_element(
+        self, new_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = new_fixture
         choice = parent._new_choice()
         assert choice.xml == expected_xml
 
-    def it_adds_an_insert_method_for_the_child_element(self, insert_fixture):
+    def it_adds_an_insert_method_for_the_child_element(
+        self, insert_fixture: tuple[CT_Parent, CT_Choice, str]
+    ) -> None:
         parent, choice, expected_xml = insert_fixture
         parent._insert_choice(choice)
         assert parent.xml == expected_xml
+        assert parent._insert_choice.__doc__ is not None
         assert parent._insert_choice.__doc__.startswith("Return the passed ``<w:choice>`` ")
 
-    def it_adds_an_add_method_for_the_child_element(self, add_fixture):
+    def it_adds_an_add_method_for_the_child_element(
+        self, add_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = add_fixture
         choice = parent._add_choice()
         assert parent.xml == expected_xml
         assert isinstance(choice, CT_Choice)
+        assert parent._add_choice.__doc__ is not None
         assert parent._add_choice.__doc__.startswith("Add a new ``<w:choice>`` child element ")
 
-    def it_adds_a_get_or_change_to_method_for_the_child_element(self, get_or_change_to_fixture):
+    def it_adds_a_get_or_change_to_method_for_the_child_element(
+        self, get_or_change_to_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = get_or_change_to_fixture
         choice = parent.get_or_change_to_choice()
         assert isinstance(choice, CT_Choice)
@@ -267,8 +307,8 @@ class DescribeChoice:
     # fixtures -------------------------------------------------------
 
     @pytest.fixture
-    def add_fixture(self):
-        parent = self.parent_bldr().element
+    def add_fixture(self) -> tuple[CT_Parent, str]:
+        parent = cast(CT_Parent, self.parent_bldr().element)
         expected_xml = self.parent_bldr("choice").xml()
         return parent, expected_xml
 
@@ -279,25 +319,26 @@ class DescribeChoice:
             ("choice", "choice"),
         ]
     )
-    def get_or_change_to_fixture(self, request):
-        before_member_tag, after_member_tag = request.param
-        parent = self.parent_bldr(before_member_tag).element
+    def get_or_change_to_fixture(self, request: pytest.FixtureRequest) -> tuple[CT_Parent, str]:
+        before_member_tag, after_member_tag = cast("tuple[str | None, str]", request.param)
+        parent = cast(CT_Parent, self.parent_bldr(before_member_tag).element)
         expected_xml = self.parent_bldr(after_member_tag).xml()
         return parent, expected_xml
 
     @pytest.fixture(params=["choice", None])
-    def getter_fixture(self, request):
-        choice_tag = request.param
-        parent = self.parent_bldr(choice_tag).element
+    def getter_fixture(self, request: pytest.FixtureRequest) -> tuple[CT_Parent, _Element | None]:
+        choice_tag = cast("str | None", request.param)
+        parent = cast(CT_Parent, self.parent_bldr(choice_tag).element)
         expected_choice = parent.find(qn("w:choice"))  # None if not found
         return parent, expected_choice
 
     @pytest.fixture
-    def insert_fixture(self):
-        parent = (
-            a_parent().with_nsdecls().with_child(an_oomChild()).with_child(an_oooChild())
-        ).element
-        choice = a_choice().with_nsdecls().element
+    def insert_fixture(self) -> tuple[CT_Parent, CT_Choice, str]:
+        parent = cast(
+            CT_Parent,
+            (a_parent().with_nsdecls().with_child(an_oomChild()).with_child(an_oooChild())).element,
+        )
+        choice = cast(CT_Choice, a_choice().with_nsdecls().element)
         expected_xml = (
             a_parent()
             .with_nsdecls()
@@ -308,14 +349,14 @@ class DescribeChoice:
         return parent, choice, expected_xml
 
     @pytest.fixture
-    def new_fixture(self):
-        parent = self.parent_bldr().element
+    def new_fixture(self) -> tuple[CT_Parent, str]:
+        parent = cast(CT_Parent, self.parent_bldr().element)
         expected_xml = a_choice().with_nsdecls().xml()
         return parent, expected_xml
 
     # fixture components ---------------------------------------------
 
-    def parent_bldr(self, choice_tag=None):
+    def parent_bldr(self, choice_tag: str | None = None) -> BaseBuilder:
         parent_bldr = a_parent().with_nsdecls()
         if choice_tag == "choice":
             parent_bldr.with_child(a_choice())
@@ -325,73 +366,91 @@ class DescribeChoice:
 
 
 class DescribeOneAndOnlyOne:
-    def it_adds_a_getter_property_for_the_child_element(self, getter_fixture):
+    def it_adds_a_getter_property_for_the_child_element(
+        self, getter_fixture: tuple[CT_Parent, _Element | None]
+    ) -> None:
         parent, oooChild = getter_fixture
         assert parent.oooChild is oooChild
 
     # fixtures -------------------------------------------------------
 
     @pytest.fixture
-    def getter_fixture(self):
-        parent = a_parent().with_nsdecls().with_child(an_oooChild()).element
+    def getter_fixture(self) -> tuple[CT_Parent, _Element | None]:
+        parent = cast(CT_Parent, a_parent().with_nsdecls().with_child(an_oooChild()).element)
         oooChild = parent.find(qn("w:oooChild"))
         return parent, oooChild
 
 
 class DescribeOneOrMore:
-    def it_adds_a_getter_property_for_the_child_element_list(self, getter_fixture):
+    def it_adds_a_getter_property_for_the_child_element_list(
+        self, getter_fixture: tuple[CT_Parent, _Element | None]
+    ) -> None:
         parent, oomChild = getter_fixture
         assert parent.oomChild_lst[0] is oomChild
 
-    def it_adds_a_creator_method_for_the_child_element(self, new_fixture):
+    def it_adds_a_creator_method_for_the_child_element(
+        self, new_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = new_fixture
         oomChild = parent._new_oomChild()
         assert oomChild.xml == expected_xml
 
-    def it_adds_an_insert_method_for_the_child_element(self, insert_fixture):
+    def it_adds_an_insert_method_for_the_child_element(
+        self, insert_fixture: tuple[CT_Parent, CT_OomChild, str]
+    ) -> None:
         parent, oomChild, expected_xml = insert_fixture
         parent._insert_oomChild(oomChild)
         assert parent.xml == expected_xml
+        assert parent._insert_oomChild.__doc__ is not None
         assert parent._insert_oomChild.__doc__.startswith("Return the passed ``<w:oomChild>`` ")
 
-    def it_adds_a_private_add_method_for_the_child_element(self, add_fixture):
+    def it_adds_a_private_add_method_for_the_child_element(
+        self, add_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = add_fixture
         oomChild = parent._add_oomChild()
         assert parent.xml == expected_xml
         assert isinstance(oomChild, CT_OomChild)
+        assert parent._add_oomChild.__doc__ is not None
         assert parent._add_oomChild.__doc__.startswith("Add a new ``<w:oomChild>`` child element ")
 
-    def it_adds_a_public_add_method_for_the_child_element(self, add_fixture):
+    def it_adds_a_public_add_method_for_the_child_element(
+        self, add_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = add_fixture
         oomChild = parent.add_oomChild()
         assert parent.xml == expected_xml
         assert isinstance(oomChild, CT_OomChild)
+        assert parent._add_oomChild.__doc__ is not None
         assert parent._add_oomChild.__doc__.startswith("Add a new ``<w:oomChild>`` child element ")
 
     # fixtures -------------------------------------------------------
 
     @pytest.fixture
-    def add_fixture(self):
-        parent = self.parent_bldr(False).element
+    def add_fixture(self) -> tuple[CT_Parent, str]:
+        parent = cast(CT_Parent, self.parent_bldr(False).element)
         expected_xml = self.parent_bldr(True).xml()
         return parent, expected_xml
 
     @pytest.fixture
-    def getter_fixture(self):
-        parent = self.parent_bldr(True).element
+    def getter_fixture(self) -> tuple[CT_Parent, _Element | None]:
+        parent = cast(CT_Parent, self.parent_bldr(True).element)
         oomChild = parent.find(qn("w:oomChild"))
         return parent, oomChild
 
     @pytest.fixture
-    def insert_fixture(self):
-        parent = (
-            a_parent()
-            .with_nsdecls()
-            .with_child(an_oooChild())
-            .with_child(a_zomChild())
-            .with_child(a_zooChild())
-        ).element
-        oomChild = an_oomChild().with_nsdecls().element
+    def insert_fixture(self) -> tuple[CT_Parent, CT_OomChild, str]:
+        parent = cast(
+            CT_Parent,
+            (
+                a_parent()
+                .with_nsdecls()
+                .with_child(an_oooChild())
+                .with_child(a_zomChild())
+                .with_child(a_zooChild())
+            ).element,
+        )
+        oomChild = cast(CT_OomChild, an_oomChild().with_nsdecls().element)
         expected_xml = (
             a_parent()
             .with_nsdecls()
@@ -403,14 +462,14 @@ class DescribeOneOrMore:
         return parent, oomChild, expected_xml
 
     @pytest.fixture
-    def new_fixture(self):
-        parent = self.parent_bldr(False).element
+    def new_fixture(self) -> tuple[CT_Parent, str]:
+        parent = cast(CT_Parent, self.parent_bldr(False).element)
         expected_xml = an_oomChild().with_nsdecls().xml()
         return parent, expected_xml
 
     # fixture components ---------------------------------------------
 
-    def parent_bldr(self, oomChild_is_present):
+    def parent_bldr(self, oomChild_is_present: bool) -> BaseBuilder:
         parent_bldr = a_parent().with_nsdecls()
         if oomChild_is_present:
             parent_bldr.with_child(an_oomChild())
@@ -418,29 +477,34 @@ class DescribeOneOrMore:
 
 
 class DescribeOptionalAttribute:
-    def it_adds_a_getter_property_for_the_attr_value(self, getter_fixture):
+    def it_adds_a_getter_property_for_the_attr_value(
+        self, getter_fixture: tuple[CT_Parent, int]
+    ) -> None:
         parent, optAttr_python_value = getter_fixture
         assert parent.optAttr == optAttr_python_value
 
-    def it_adds_a_setter_property_for_the_attr(self, setter_fixture):
+    def it_adds_a_setter_property_for_the_attr(
+        self, setter_fixture: tuple[CT_Parent, int | None, str]
+    ) -> None:
         parent, value, expected_xml = setter_fixture
         parent.optAttr = value
         assert parent.xml == expected_xml
 
-    def it_adds_a_docstring_for_the_property(self):
+    def it_adds_a_docstring_for_the_property(self) -> None:
+        assert CT_Parent.optAttr.__doc__ is not None
         assert CT_Parent.optAttr.__doc__.startswith("ST_IntegerType type-converted value of ")
 
     # fixtures -------------------------------------------------------
 
     @pytest.fixture
-    def getter_fixture(self):
-        parent = a_parent().with_nsdecls().with_optAttr("24").element
+    def getter_fixture(self) -> tuple[CT_Parent, int]:
+        parent = cast(CT_Parent, a_parent().with_nsdecls().with_optAttr("24").element)
         return parent, 24
 
     @pytest.fixture(params=[36, None])
-    def setter_fixture(self, request):
-        value = request.param
-        parent = a_parent().with_nsdecls().with_optAttr("42").element
+    def setter_fixture(self, request: pytest.FixtureRequest) -> tuple[CT_Parent, int | None, str]:
+        value = cast("int | None", request.param)
+        parent = cast(CT_Parent, a_parent().with_nsdecls().with_optAttr("42").element)
         if value is None:
             expected_xml = a_parent().with_nsdecls().xml()
         else:
@@ -449,33 +513,40 @@ class DescribeOptionalAttribute:
 
 
 class DescribeRequiredAttribute:
-    def it_adds_a_getter_property_for_the_attr_value(self, getter_fixture):
+    def it_adds_a_getter_property_for_the_attr_value(
+        self, getter_fixture: tuple[CT_Parent, int]
+    ) -> None:
         parent, reqAttr_python_value = getter_fixture
         assert parent.reqAttr == reqAttr_python_value
 
-    def it_adds_a_setter_property_for_the_attr(self, setter_fixture):
+    def it_adds_a_setter_property_for_the_attr(
+        self, setter_fixture: tuple[CT_Parent, int, str]
+    ) -> None:
         parent, value, expected_xml = setter_fixture
         parent.reqAttr = value
         assert parent.xml == expected_xml
 
-    def it_adds_a_docstring_for_the_property(self):
+    def it_adds_a_docstring_for_the_property(self) -> None:
+        assert CT_Parent.reqAttr.__doc__ is not None
         assert CT_Parent.reqAttr.__doc__.startswith("ST_IntegerType type-converted value of ")
 
-    def it_raises_on_get_when_attribute_not_present(self):
-        parent = a_parent().with_nsdecls().element
+    def it_raises_on_get_when_attribute_not_present(self) -> None:
+        parent = cast(CT_Parent, a_parent().with_nsdecls().element)
         with pytest.raises(InvalidXmlError):
             parent.reqAttr
 
-    def it_raises_on_assign_invalid_value(self, invalid_assign_fixture):
+    def it_raises_on_assign_invalid_value(
+        self, invalid_assign_fixture: tuple[CT_Parent, object, type[Exception]]
+    ) -> None:
         parent, value, expected_exception = invalid_assign_fixture
         with pytest.raises(expected_exception):
-            parent.reqAttr = value
+            parent.reqAttr = value  # pyright: ignore[reportAttributeAccessIssue]
 
     # fixtures -------------------------------------------------------
 
     @pytest.fixture
-    def getter_fixture(self):
-        parent = a_parent().with_nsdecls().with_reqAttr("42").element
+    def getter_fixture(self) -> tuple[CT_Parent, int]:
+        parent = cast(CT_Parent, a_parent().with_nsdecls().with_reqAttr("42").element)
         return parent, 42
 
     @pytest.fixture(
@@ -485,76 +556,94 @@ class DescribeRequiredAttribute:
             ("2", TypeError),
         ]
     )
-    def invalid_assign_fixture(self, request):
-        invalid_value, expected_exception = request.param
-        parent = a_parent().with_nsdecls().with_reqAttr(1).element
+    def invalid_assign_fixture(
+        self, request: pytest.FixtureRequest
+    ) -> tuple[CT_Parent, object, type[Exception]]:
+        invalid_value, expected_exception = cast("tuple[object, type[Exception]]", request.param)
+        parent = cast(CT_Parent, a_parent().with_nsdecls().with_reqAttr(1).element)
         return parent, invalid_value, expected_exception
 
     @pytest.fixture
-    def setter_fixture(self):
-        parent = a_parent().with_nsdecls().with_reqAttr("42").element
+    def setter_fixture(self) -> tuple[CT_Parent, int, str]:
+        parent = cast(CT_Parent, a_parent().with_nsdecls().with_reqAttr("42").element)
         value = 24
         expected_xml = a_parent().with_nsdecls().with_reqAttr(value).xml()
         return parent, value, expected_xml
 
 
 class DescribeZeroOrMore:
-    def it_adds_a_getter_property_for_the_child_element_list(self, getter_fixture):
+    def it_adds_a_getter_property_for_the_child_element_list(
+        self, getter_fixture: tuple[CT_Parent, _Element | None]
+    ) -> None:
         parent, zomChild = getter_fixture
         assert parent.zomChild_lst[0] is zomChild
 
-    def it_adds_a_creator_method_for_the_child_element(self, new_fixture):
+    def it_adds_a_creator_method_for_the_child_element(
+        self, new_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = new_fixture
         zomChild = parent._new_zomChild()
         assert zomChild.xml == expected_xml
 
-    def it_adds_an_insert_method_for_the_child_element(self, insert_fixture):
+    def it_adds_an_insert_method_for_the_child_element(
+        self, insert_fixture: tuple[CT_Parent, CT_ZomChild, str]
+    ) -> None:
         parent, zomChild, expected_xml = insert_fixture
         parent._insert_zomChild(zomChild)
         assert parent.xml == expected_xml
+        assert parent._insert_zomChild.__doc__ is not None
         assert parent._insert_zomChild.__doc__.startswith("Return the passed ``<w:zomChild>`` ")
 
-    def it_adds_an_add_method_for_the_child_element(self, add_fixture):
+    def it_adds_an_add_method_for_the_child_element(
+        self, add_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = add_fixture
         zomChild = parent._add_zomChild()
         assert parent.xml == expected_xml
         assert isinstance(zomChild, CT_ZomChild)
+        assert parent._add_zomChild.__doc__ is not None
         assert parent._add_zomChild.__doc__.startswith("Add a new ``<w:zomChild>`` child element ")
 
-    def it_adds_a_public_add_method_for_the_child_element(self, add_fixture):
+    def it_adds_a_public_add_method_for_the_child_element(
+        self, add_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = add_fixture
         zomChild = parent.add_zomChild()
         assert parent.xml == expected_xml
         assert isinstance(zomChild, CT_ZomChild)
+        assert parent._add_zomChild.__doc__ is not None
         assert parent._add_zomChild.__doc__.startswith("Add a new ``<w:zomChild>`` child element ")
 
-    def it_removes_the_property_root_name_used_for_declaration(self):
+    def it_removes_the_property_root_name_used_for_declaration(self) -> None:
         assert not hasattr(CT_Parent, "zomChild")
 
     # fixtures -------------------------------------------------------
 
     @pytest.fixture
-    def add_fixture(self):
-        parent = self.parent_bldr(False).element
+    def add_fixture(self) -> tuple[CT_Parent, str]:
+        parent = cast(CT_Parent, self.parent_bldr(False).element)
         expected_xml = self.parent_bldr(True).xml()
         return parent, expected_xml
 
     @pytest.fixture
-    def getter_fixture(self):
-        parent = self.parent_bldr(True).element
+    def getter_fixture(self) -> tuple[CT_Parent, _Element | None]:
+        parent = cast(CT_Parent, self.parent_bldr(True).element)
         zomChild = parent.find(qn("w:zomChild"))
         return parent, zomChild
 
     @pytest.fixture
-    def insert_fixture(self):
-        parent = (
-            a_parent()
-            .with_nsdecls()
-            .with_child(an_oomChild())
-            .with_child(an_oooChild())
-            .with_child(a_zooChild())
-        ).element
-        zomChild = a_zomChild().with_nsdecls().element
+    def insert_fixture(self) -> tuple[CT_Parent, CT_ZomChild, str]:
+        parent = cast(
+            CT_Parent,
+            (
+                a_parent()
+                .with_nsdecls()
+                .with_child(an_oomChild())
+                .with_child(an_oooChild())
+                .with_child(a_zooChild())
+            ).element,
+        )
+        zomChild = cast(CT_ZomChild, a_zomChild().with_nsdecls().element)
         expected_xml = (
             a_parent()
             .with_nsdecls()
@@ -566,12 +655,12 @@ class DescribeZeroOrMore:
         return parent, zomChild, expected_xml
 
     @pytest.fixture
-    def new_fixture(self):
-        parent = self.parent_bldr(False).element
+    def new_fixture(self) -> tuple[CT_Parent, str]:
+        parent = cast(CT_Parent, self.parent_bldr(False).element)
         expected_xml = a_zomChild().with_nsdecls().xml()
         return parent, expected_xml
 
-    def parent_bldr(self, zomChild_is_present):
+    def parent_bldr(self, zomChild_is_present: bool) -> BaseBuilder:
         parent_bldr = a_parent().with_nsdecls()
         if zomChild_is_present:
             parent_bldr.with_child(a_zomChild())
@@ -579,30 +668,42 @@ class DescribeZeroOrMore:
 
 
 class DescribeZeroOrOne:
-    def it_adds_a_getter_property_for_the_child_element(self, getter_fixture):
+    def it_adds_a_getter_property_for_the_child_element(
+        self, getter_fixture: tuple[CT_Parent, _Element | None]
+    ) -> None:
         parent, zooChild = getter_fixture
         assert parent.zooChild is zooChild
 
-    def it_adds_an_add_method_for_the_child_element(self, add_fixture):
+    def it_adds_an_add_method_for_the_child_element(
+        self, add_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = add_fixture
         zooChild = parent._add_zooChild()
         assert parent.xml == expected_xml
         assert isinstance(zooChild, CT_ZooChild)
+        assert parent._add_zooChild.__doc__ is not None
         assert parent._add_zooChild.__doc__.startswith("Add a new ``<w:zooChild>`` child element ")
 
-    def it_adds_an_insert_method_for_the_child_element(self, insert_fixture):
+    def it_adds_an_insert_method_for_the_child_element(
+        self, insert_fixture: tuple[CT_Parent, CT_ZooChild, str]
+    ) -> None:
         parent, zooChild, expected_xml = insert_fixture
         parent._insert_zooChild(zooChild)
         assert parent.xml == expected_xml
+        assert parent._insert_zooChild.__doc__ is not None
         assert parent._insert_zooChild.__doc__.startswith("Return the passed ``<w:zooChild>`` ")
 
-    def it_adds_a_get_or_add_method_for_the_child_element(self, get_or_add_fixture):
+    def it_adds_a_get_or_add_method_for_the_child_element(
+        self, get_or_add_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = get_or_add_fixture
         zooChild = parent.get_or_add_zooChild()
         assert isinstance(zooChild, CT_ZooChild)
         assert parent.xml == expected_xml
 
-    def it_adds_a_remover_method_for_the_child_element(self, remove_fixture):
+    def it_adds_a_remover_method_for_the_child_element(
+        self, remove_fixture: tuple[CT_Parent, str]
+    ) -> None:
         parent, expected_xml = remove_fixture
         parent._remove_zooChild()
         assert parent.xml == expected_xml
@@ -610,35 +711,38 @@ class DescribeZeroOrOne:
     # fixtures -------------------------------------------------------
 
     @pytest.fixture
-    def add_fixture(self):
-        parent = self.parent_bldr(False).element
+    def add_fixture(self) -> tuple[CT_Parent, str]:
+        parent = cast(CT_Parent, self.parent_bldr(False).element)
         expected_xml = self.parent_bldr(True).xml()
         return parent, expected_xml
 
     @pytest.fixture(params=[True, False])
-    def getter_fixture(self, request):
-        zooChild_is_present = request.param
-        parent = self.parent_bldr(zooChild_is_present).element
+    def getter_fixture(self, request: pytest.FixtureRequest) -> tuple[CT_Parent, _Element | None]:
+        zooChild_is_present = cast(bool, request.param)
+        parent = cast(CT_Parent, self.parent_bldr(zooChild_is_present).element)
         zooChild = parent.find(qn("w:zooChild"))  # None if not found
         return parent, zooChild
 
     @pytest.fixture(params=[True, False])
-    def get_or_add_fixture(self, request):
-        zooChild_is_present = request.param
-        parent = self.parent_bldr(zooChild_is_present).element
+    def get_or_add_fixture(self, request: pytest.FixtureRequest) -> tuple[CT_Parent, str]:
+        zooChild_is_present = cast(bool, request.param)
+        parent = cast(CT_Parent, self.parent_bldr(zooChild_is_present).element)
         expected_xml = self.parent_bldr(True).xml()
         return parent, expected_xml
 
     @pytest.fixture
-    def insert_fixture(self):
-        parent = (
-            a_parent()
-            .with_nsdecls()
-            .with_child(an_oomChild())
-            .with_child(an_oooChild())
-            .with_child(a_zomChild())
-        ).element
-        zooChild = a_zooChild().with_nsdecls().element
+    def insert_fixture(self) -> tuple[CT_Parent, CT_ZooChild, str]:
+        parent = cast(
+            CT_Parent,
+            (
+                a_parent()
+                .with_nsdecls()
+                .with_child(an_oomChild())
+                .with_child(an_oooChild())
+                .with_child(a_zomChild())
+            ).element,
+        )
+        zooChild = cast(CT_ZooChild, a_zooChild().with_nsdecls().element)
         expected_xml = (
             a_parent()
             .with_nsdecls()
@@ -650,15 +754,15 @@ class DescribeZeroOrOne:
         return parent, zooChild, expected_xml
 
     @pytest.fixture(params=[True, False])
-    def remove_fixture(self, request):
-        zooChild_is_present = request.param
-        parent = self.parent_bldr(zooChild_is_present).element
+    def remove_fixture(self, request: pytest.FixtureRequest) -> tuple[CT_Parent, str]:
+        zooChild_is_present = cast(bool, request.param)
+        parent = cast(CT_Parent, self.parent_bldr(zooChild_is_present).element)
         expected_xml = self.parent_bldr(False).xml()
         return parent, expected_xml
 
     # fixture components ---------------------------------------------
 
-    def parent_bldr(self, zooChild_is_present):
+    def parent_bldr(self, zooChild_is_present: bool) -> BaseBuilder:
         parent_bldr = a_parent().with_nsdecls()
         if zooChild_is_present:
             parent_bldr.with_child(a_zooChild())
@@ -666,23 +770,25 @@ class DescribeZeroOrOne:
 
 
 class DescribeZeroOrOneChoice:
-    def it_adds_a_getter_for_the_current_choice(self, getter_fixture):
+    def it_adds_a_getter_for_the_current_choice(
+        self, getter_fixture: tuple[CT_Parent, _Element | None]
+    ) -> None:
         parent, expected_choice = getter_fixture
         assert parent.eg_zooChoice is expected_choice
 
     # fixtures -------------------------------------------------------
 
     @pytest.fixture(params=[None, "choice", "choice2"])
-    def getter_fixture(self, request):
-        choice_tag = request.param
-        parent = self.parent_bldr(choice_tag).element
+    def getter_fixture(self, request: pytest.FixtureRequest) -> tuple[CT_Parent, _Element | None]:
+        choice_tag = cast("str | None", request.param)
+        parent = cast(CT_Parent, self.parent_bldr(choice_tag).element)
         tagname = "w:%s" % choice_tag
         expected_choice = parent.find(qn(tagname))  # None if not found
         return parent, expected_choice
 
     # fixture components ---------------------------------------------
 
-    def parent_bldr(self, choice_tag=None):
+    def parent_bldr(self, choice_tag: str | None = None) -> BaseBuilder:
         parent_bldr = a_parent().with_nsdecls()
         if choice_tag == "choice":
             parent_bldr.with_child(a_choice())
@@ -698,7 +804,7 @@ class DescribeZeroOrOneChoice:
 
 class ST_IntegerType(BaseIntType):
     @classmethod
-    def validate(cls, value):
+    def validate(cls, value: int) -> None:
         cls.validate_int(value)
         if value < 1 or value > 42:
             raise ValueError("value must be in range 1 to 42 inclusive")
@@ -709,16 +815,49 @@ class CT_Parent(BaseOxmlElement):
     ``<w:parent>`` element, an invented element for use in testing.
     """
 
+    choice: BaseOxmlElement | None
+    get_or_change_to_choice: Callable[[], "CT_Choice"]
+    _new_choice: Callable[[], "CT_Choice"]
+    _insert_choice: Callable[["CT_Choice"], "CT_Choice"]
+    _add_choice: Callable[[], "CT_Choice"]
+
+    oooChild: BaseOxmlElement
+
+    oomChild_lst: List["CT_OomChild"]
+    add_oomChild: Callable[[], "CT_OomChild"]
+    _new_oomChild: Callable[[], "CT_OomChild"]
+    _insert_oomChild: Callable[["CT_OomChild"], "CT_OomChild"]
+    _add_oomChild: Callable[[], "CT_OomChild"]
+
+    zomChild_lst: List["CT_ZomChild"]
+    add_zomChild: Callable[[], "CT_ZomChild"]
+    _new_zomChild: Callable[[], "CT_ZomChild"]
+    _insert_zomChild: Callable[["CT_ZomChild"], "CT_ZomChild"]
+    _add_zomChild: Callable[[], "CT_ZomChild"]
+
+    zooChild: BaseOxmlElement | None
+    get_or_add_zooChild: Callable[[], "CT_ZooChild"]
+    _new_zooChild: Callable[[], "CT_ZooChild"]
+    _insert_zooChild: Callable[["CT_ZooChild"], "CT_ZooChild"]
+    _add_zooChild: Callable[[], "CT_ZooChild"]
+    _remove_zooChild: Callable[[], None]
+
     eg_zooChoice = ZeroOrOneChoice(
         (Choice("w:choice"), Choice("w:choice2")),
         successors=("w:oomChild", "w:oooChild"),
     )
     oomChild = OneOrMore("w:oomChild", successors=("w:oooChild", "w:zomChild", "w:zooChild"))
-    oooChild = OneAndOnlyOne("w:oooChild")
+    oooChild = OneAndOnlyOne("w:oooChild")  # pyright: ignore[reportAssignmentType]
     zomChild = ZeroOrMore("w:zomChild", successors=("w:zooChild",))
-    zooChild = ZeroOrOne("w:zooChild", successors=())
-    optAttr = OptionalAttribute("w:optAttr", ST_IntegerType)
-    reqAttr = RequiredAttribute("reqAttr", ST_IntegerType)
+    zooChild = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "w:zooChild", successors=()
+    )
+    optAttr: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "w:optAttr", ST_IntegerType
+    )
+    reqAttr: int = RequiredAttribute(  # pyright: ignore[reportAssignmentType]
+        "reqAttr", ST_IntegerType
+    )
 
 
 class CT_Choice(BaseOxmlElement):
@@ -798,29 +937,29 @@ class CT_ZooChildBuilder(BaseBuilder):
     __attrs__ = ()
 
 
-def a_choice():
+def a_choice() -> CT_ChoiceBuilder:
     return CT_ChoiceBuilder()
 
 
-def a_choice2():
+def a_choice2() -> CT_Choice2Builder:
     return CT_Choice2Builder()
 
 
-def a_parent():
+def a_parent() -> CT_ParentBuilder:
     return CT_ParentBuilder()
 
 
-def a_zomChild():
+def a_zomChild() -> CT_ZomChildBuilder:
     return CT_ZomChildBuilder()
 
 
-def a_zooChild():
+def a_zooChild() -> CT_ZooChildBuilder:
     return CT_ZooChildBuilder()
 
 
-def an_oomChild():
+def an_oomChild() -> CT_OomChildBuilder:
     return CT_OomChildBuilder()
 
 
-def an_oooChild():
+def an_oooChild() -> CT_OooChildBuilder:
     return CT_OooChildBuilder()

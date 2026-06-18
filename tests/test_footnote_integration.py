@@ -1,10 +1,15 @@
+# pyright: reportPrivateUsage=false
+
 """Round-trip integration test for footnote creation."""
+
+from __future__ import annotations
 
 import io
 from typing import cast
 
 from docx import Document
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
+from docx.oxml.footnotes import CT_Footnotes
 from docx.parts.footnotes import FootnotesPart
 
 
@@ -24,7 +29,7 @@ class DescribeFootnoteRoundTrip:
         reopened = Document(buffer)
 
         footnotes_part = cast(FootnotesPart, reopened.part.part_related_by(RT.FOOTNOTES))
-        footnotes = footnotes_part.element
+        footnotes = cast(CT_Footnotes, footnotes_part.element)
         # -- two separators (-1, 0) plus two user footnotes (1, 2) --
         ids = [ftn.id for ftn in footnotes.footnote_lst]
         assert ids == [-1, 0, 1, 2]

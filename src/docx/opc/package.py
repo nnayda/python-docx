@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import IO, TYPE_CHECKING, Iterator, cast
+from typing import IO, TYPE_CHECKING, Callable, Iterator, cast
 
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.opc.packuri import PACKAGE_URI, PackURI
@@ -70,7 +70,10 @@ class OpcPackage:
         """Generate exactly one reference to each of the parts in the package by
         performing a depth-first traversal of the rels graph."""
 
-        def walk_parts(source, visited=[]):
+        def walk_parts(
+            source: OpcPackage | Part, visited: list[Part] | None = None
+        ) -> Iterator[Part]:
+            visited = [] if visited is None else visited
             for rel in source.rels.values():
                 if rel.is_external:
                     continue
@@ -119,13 +122,22 @@ class OpcPackage:
             candidate_partname = template % n
             if candidate_partname not in partnames:
                 return PackURI(candidate_partname)
+        # -- unreachable: the range spans one more value than there are partnames, so a
+        # -- free candidate is always found, but this satisfies the declared return type. --
+        raise Exception(  # pragma: no cover
+            "ProgrammingError: could not find unused partname for template '%s'" % template
+        )
 
     @classmethod
     def open(cls, pkg_file: str | IO[bytes]) -> Self:
         """Return an |OpcPackage| instance loaded with the contents of `pkg_file`."""
         pkg_reader = PackageReader.from_file(pkg_file)
         package = cls()
-        Unmarshaller.unmarshal(pkg_reader, package, PartFactory)
+        # -- `PartFactory.__new__` is typed against the `docx.package.Package` subclass,
+        # -- but the unmarshaller works against the `OpcPackage` base; the concrete
+        # -- instance is always a `Package`. --
+        part_factory = cast("Callable[[PackURI, str, str, bytes, OpcPackage], Part]", PartFactory)
+        Unmarshaller.unmarshal(pkg_reader, package, part_factory)
         return package
 
     def part_related_by(self, reltype: str) -> Part:
@@ -183,7 +195,11 @@ class Unmarshaller:
     """Hosts static methods for unmarshalling a package from a |PackageReader|."""
 
     @staticmethod
-    def unmarshal(pkg_reader, package, part_factory):
+    def unmarshal(
+        pkg_reader: PackageReader,
+        package: OpcPackage,
+        part_factory: Callable[[PackURI, str, str, bytes, OpcPackage], Part],
+    ):
         """Construct graph of parts and realized relationships based on the contents of
         `pkg_reader`, delegating construction of each part to `part_factory`.
 
@@ -196,20 +212,26 @@ class Unmarshaller:
         package.after_unmarshal()
 
     @staticmethod
-    def _unmarshal_parts(pkg_reader, package, part_factory):
+    def _unmarshal_parts(
+        pkg_reader: PackageReader,
+        package: OpcPackage,
+        part_factory: Callable[[PackURI, str, str, bytes, OpcPackage], Part],
+    ) -> dict[PackURI, Part]:
         """Return a dictionary of |Part| instances unmarshalled from `pkg_reader`, keyed
         by partname.
 
         Side-effect is that each part in `pkg_reader` is constructed using
         `part_factory`.
         """
-        parts = {}
+        parts: dict[PackURI, Part] = {}
         for partname, content_type, reltype, blob in pkg_reader.iter_sparts():
             parts[partname] = part_factory(partname, content_type, reltype, blob, package)
         return parts
 
     @staticmethod
-    def _unmarshal_relationships(pkg_reader, package, parts):
+    def _unmarshal_relationships(
+        pkg_reader: PackageReader, package: OpcPackage, parts: dict[PackURI, Part]
+    ):
         """Add a relationship to the source object corresponding to each of the
         relationships in `pkg_reader` with its target_part set to the actual target part
         in `parts`."""

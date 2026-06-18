@@ -59,7 +59,7 @@ class Relationships(Dict[str, "_Relationship"]):
         return self._target_parts_by_rId
 
     @property
-    def xml(self) -> str:
+    def xml(self) -> bytes:
         """Serialize this relationship collection into XML suitable for storage as a
         .rels file in an OPC package."""
         rels_elm = CT_Relationships.new()

@@ -67,7 +67,11 @@ class InlineShape:
     @height.setter
     def height(self, cy: Length):
         self._inline.extent.cy = cy
-        self._inline.graphic.graphicData.pic.spPr.cy = cy
+        pic = self._inline.graphic.graphicData.pic
+        # -- a `wp:inline` shape with a settable height is always a picture, so `pic`
+        # -- (`pic:pic`) is present even though the schema makes it optional. --
+        assert pic is not None
+        pic.spPr.cy = cy
 
     @property
     def type(self):
@@ -79,7 +83,10 @@ class InlineShape:
         graphicData = self._inline.graphic.graphicData
         uri = graphicData.uri
         if uri == nsmap["pic"]:
-            blip = graphicData.pic.blipFill.blip
+            pic = graphicData.pic
+            # -- when `uri` is the picture namespace, the `pic:pic` child is present. --
+            assert pic is not None
+            blip = pic.blipFill.blip
             if blip.link is not None:
                 return WD_INLINE_SHAPE.LINKED_PICTURE
             return WD_INLINE_SHAPE.PICTURE
@@ -100,4 +107,8 @@ class InlineShape:
     @width.setter
     def width(self, cx: Length):
         self._inline.extent.cx = cx
-        self._inline.graphic.graphicData.pic.spPr.cx = cx
+        pic = self._inline.graphic.graphicData.pic
+        # -- a `wp:inline` shape with a settable width is always a picture, so `pic`
+        # -- (`pic:pic`) is present even though the schema makes it optional. --
+        assert pic is not None
+        pic.spPr.cx = cx

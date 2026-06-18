@@ -1,5 +1,9 @@
 """Test data builders for text XML elements."""
 
+from __future__ import annotations
+
+from typing_extensions import Self
+
 from ...unitdata import BaseBuilder
 from .shared import CT_OnOffBuilder, CT_StringBuilder
 
@@ -14,7 +18,7 @@ class CT_EmptyBuilder(BaseBuilder):
     __nspfxs__ = ("w",)
     __attrs__ = ()
 
-    def __init__(self, tag):
+    def __init__(self, tag: str) -> None:
         self.__tag__ = tag
         super(CT_EmptyBuilder, self).__init__()
 
@@ -60,7 +64,7 @@ class CT_TextBuilder(BaseBuilder):
     __nspfxs__ = ("w",)
     __attrs__ = ()
 
-    def with_space(self, value):
+    def with_space(self, value: object) -> Self:
         self._set_xmlattr("xml:space", str(value))
         return self
 

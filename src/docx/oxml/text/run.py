@@ -32,6 +32,8 @@ class CT_R(BaseOxmlElement):
     _add_t: Callable[..., CT_Text]
     add_footnoteReference: Callable[[], CT_FtnEdnRef]
 
+    footnoteReference_lst: List[CT_FtnEdnRef]
+
     rPr: CT_RPr | None = ZeroOrOne("w:rPr")  # pyright: ignore[reportAssignmentType]
     br = ZeroOrMore("w:br")
     cr = ZeroOrMore("w:cr")

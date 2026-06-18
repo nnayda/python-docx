@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from docx.opc.constants import CONTENT_TYPE as CT
 from docx.opc.packuri import PackURI
@@ -11,7 +11,8 @@ from docx.oxml.parser import parse_xml
 from docx.parts.story import StoryPart
 
 if TYPE_CHECKING:
-    from docx.opc.package import OpcPackage
+    from docx.oxml.footnotes import CT_Footnotes
+    from docx.package import Package
 
 
 class FootnotesPart(StoryPart):
@@ -22,12 +23,12 @@ class FootnotesPart(StoryPart):
     """
 
     @classmethod
-    def new(cls, package: OpcPackage) -> "FootnotesPart":
+    def new(cls, package: Package) -> "FootnotesPart":
         """Return a newly-created footnotes part seeded with the separator and
         continuation-separator entries Word expects."""
         partname = PackURI("/word/footnotes.xml")
         content_type = CT.WML_FOOTNOTES
-        element = parse_xml(cls._default_footnotes_xml())
+        element = cast("CT_Footnotes", parse_xml(cls._default_footnotes_xml()))
         return cls(partname, content_type, element, package)
 
     @classmethod

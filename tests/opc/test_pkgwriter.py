@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from docx.opc.constants import CONTENT_TYPE as CT
@@ -26,7 +28,7 @@ from .unitdata.types import a_Default, a_Types, an_Override
 
 
 class DescribePackageWriter:
-    def it_can_write_a_package(self, PhysPkgWriter_, _write_methods):
+    def it_can_write_a_package(self, PhysPkgWriter_: Mock, _write_methods: Mock) -> None:
         # mockery ----------------------
         pkg_file = Mock(name="pkg_file")
         pkg_rels = Mock(name="pkg_rels")
@@ -44,13 +46,15 @@ class DescribePackageWriter:
         assert _write_methods.mock_calls == expected_calls
         phys_writer.close.assert_called_once_with()
 
-    def it_can_write_a_content_types_stream(self, write_cti_fixture):
+    def it_can_write_a_content_types_stream(
+        self, write_cti_fixture: tuple[Mock, Mock, Mock, Mock]
+    ) -> None:
         _ContentTypesItem_, parts_, phys_pkg_writer_, blob_ = write_cti_fixture
-        PackageWriter._write_content_types_stream(phys_pkg_writer_, parts_)
+        PackageWriter._write_content_types_stream(cast("_ZipPkgWriter", phys_pkg_writer_), parts_)
         _ContentTypesItem_.from_parts.assert_called_once_with(parts_)
         phys_pkg_writer_.write.assert_called_once_with("/[Content_Types].xml", blob_)
 
-    def it_can_write_a_pkg_rels_item(self):
+    def it_can_write_a_pkg_rels_item(self) -> None:
         # mockery ----------------------
         phys_writer = Mock(name="phys_writer")
         pkg_rels = Mock(name="pkg_rels")
@@ -61,12 +65,15 @@ class DescribePackageWriter:
 
     def it_can_write_a_list_of_parts(
         self, phys_pkg_writer_: Mock, part_: Mock, part_2_: Mock, rels_: Mock
-    ):
+    ) -> None:
         rels_.__len__.return_value = 1
         part_.rels = rels_
         part_2_.rels = []
 
-        PackageWriter._write_parts(phys_pkg_writer_, [part_, part_2_])
+        PackageWriter._write_parts(
+            cast("_ZipPkgWriter", phys_pkg_writer_),
+            [cast("Part", part_), cast("Part", part_2_)],
+        )
 
         expected_calls = [
             call(part_.partname, part_.blob),
@@ -78,29 +85,29 @@ class DescribePackageWriter:
     # fixtures ---------------------------------------------
 
     @pytest.fixture
-    def blob_(self, request: FixtureRequest):
+    def blob_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, str)
 
     @pytest.fixture
-    def cti_(self, request: FixtureRequest, blob_):
+    def cti_(self, request: FixtureRequest, blob_: Mock) -> Mock:
         return instance_mock(request, _ContentTypesItem, blob=blob_)
 
     @pytest.fixture
-    def _ContentTypesItem_(self, request: FixtureRequest, cti_):
+    def _ContentTypesItem_(self, request: FixtureRequest, cti_: Mock) -> Mock:
         _ContentTypesItem_ = class_mock(request, "docx.opc.pkgwriter._ContentTypesItem")
         _ContentTypesItem_.from_parts.return_value = cti_
         return _ContentTypesItem_
 
     @pytest.fixture
-    def part_(self, request: FixtureRequest):
+    def part_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, Part)
 
     @pytest.fixture
-    def part_2_(self, request: FixtureRequest):
+    def part_2_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, Part)
 
     @pytest.fixture
-    def parts_(self, request: FixtureRequest):
+    def parts_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, list)
 
     @pytest.fixture
@@ -110,15 +117,17 @@ class DescribePackageWriter:
         p.stop()
 
     @pytest.fixture
-    def phys_pkg_writer_(self, request: FixtureRequest):
+    def phys_pkg_writer_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, _ZipPkgWriter)
 
     @pytest.fixture
-    def rels_(self, request: FixtureRequest):
+    def rels_(self, request: FixtureRequest) -> Mock:
         return instance_mock(request, Relationships)
 
     @pytest.fixture
-    def write_cti_fixture(self, _ContentTypesItem_, parts_, phys_pkg_writer_, blob_):
+    def write_cti_fixture(
+        self, _ContentTypesItem_: Mock, parts_: Mock, phys_pkg_writer_: Mock, blob_: Mock
+    ) -> tuple[Mock, Mock, Mock, Mock]:
         return _ContentTypesItem_, parts_, phys_pkg_writer_, blob_
 
     @pytest.fixture
@@ -139,19 +148,23 @@ class DescribePackageWriter:
         patch3.stop()
 
     @pytest.fixture
-    def xml_for_(self, request: FixtureRequest):
+    def xml_for_(self, request: FixtureRequest) -> Mock:
         return method_mock(request, _ContentTypesItem, "xml_for")
 
 
 class Describe_ContentTypesItem:
-    def it_can_compose_content_types_element(self, xml_for_fixture):
+    def it_can_compose_content_types_element(
+        self, xml_for_fixture: tuple[_ContentTypesItem, str]
+    ) -> None:
         cti, expected_xml = xml_for_fixture
         types_elm = cti._element
         assert types_elm.xml == expected_xml
 
     # fixtures ---------------------------------------------
 
-    def _mock_part(self, request: FixtureRequest, name, partname_str, content_type):
+    def _mock_part(
+        self, request: FixtureRequest, name: str, partname_str: str, content_type: str
+    ) -> Mock:
         partname = PackURI(partname_str)
         return instance_mock(request, Part, name=name, partname=partname, content_type=content_type)
 
@@ -166,10 +179,10 @@ class Describe_ContentTypesItem:
             ("Override", "/zebra/foo.bar", "app/vnd.foobar"),
         ]
     )
-    def xml_for_fixture(self, request: FixtureRequest):
-        elm_type, partname_str, content_type = request.param
+    def xml_for_fixture(self, request: FixtureRequest) -> tuple[_ContentTypesItem, str]:
+        elm_type, partname_str, content_type = cast("tuple[str, str, str]", request.param)
         part_ = self._mock_part(request, "part_", partname_str, content_type)
-        cti = _ContentTypesItem.from_parts([part_])
+        cti = _ContentTypesItem.from_parts([cast("Part", part_)])
         # expected_xml -----------------
         types_bldr = a_Types().with_nsdecls()
         ext = partname_str.split(".")[-1].lower()

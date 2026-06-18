@@ -444,7 +444,7 @@ class ST_VerticalAlignRun(XsdStringEnumeration):
 
 class ST_Border(XsdString):
     @classmethod
-    def validate(cls, value):
+    def validate(cls, value: Any) -> None:
         cls.validate_string(value)
         valid_values = (
             "nil",

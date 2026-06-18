@@ -1,17 +1,22 @@
+# pyright: reportPrivateUsage=false
+
 """Unit test suite for docx.image.gif module."""
 
+from __future__ import annotations
+
 import io
+from typing import cast
 
 import pytest
 
 from docx.image.constants import MIME_TYPE
 from docx.image.gif import Gif
 
-from ..unitutil.mock import ANY, initializer_mock
+from ..unitutil.mock import ANY, FixtureRequest, Mock, initializer_mock
 
 
 class DescribeGif:
-    def it_can_construct_from_a_gif_stream(self, Gif__init__):
+    def it_can_construct_from_a_gif_stream(self, Gif__init__: Mock):
         cx, cy = 42, 24
         bytes_ = b"filler\x2a\x00\x18\x00"
         stream = io.BytesIO(bytes_)
@@ -22,15 +27,15 @@ class DescribeGif:
         assert isinstance(gif, Gif)
 
     def it_knows_its_content_type(self):
-        gif = Gif(None, None, None, None)
+        gif = Gif(cast(int, None), cast(int, None), cast(int, None), cast(int, None))
         assert gif.content_type == MIME_TYPE.GIF
 
     def it_knows_its_default_ext(self):
-        gif = Gif(None, None, None, None)
+        gif = Gif(cast(int, None), cast(int, None), cast(int, None), cast(int, None))
         assert gif.default_ext == "gif"
 
     # fixture components ---------------------------------------------
 
     @pytest.fixture
-    def Gif__init__(self, request):
+    def Gif__init__(self, request: FixtureRequest):
         return initializer_mock(request, Gif)

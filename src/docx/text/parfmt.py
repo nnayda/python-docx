@@ -1,16 +1,29 @@
 """Paragraph-related proxy types."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from docx.enum.text import WD_LINE_SPACING
 from docx.shared import ElementProxy, Emu, Length, Pt, Twips, lazyproperty
 from docx.text.tabstops import TabStops
+
+if TYPE_CHECKING:
+    import docx.types as t
+    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+    from docx.oxml.text.paragraph import CT_P
 
 
 class ParagraphFormat(ElementProxy):
     """Provides access to paragraph formatting such as justification, indentation, line
     spacing, space before and after, and widow/orphan control."""
 
+    def __init__(self, element: CT_P, parent: t.ProvidesXmlPart | None = None):
+        super().__init__(element, parent)
+        self._element: CT_P = element
+
     @property
-    def alignment(self):
+    def alignment(self) -> WD_PARAGRAPH_ALIGNMENT | None:
         """A member of the :ref:`WdParagraphAlignment` enumeration specifying the
         justification setting for this paragraph.
 
@@ -23,12 +36,12 @@ class ParagraphFormat(ElementProxy):
         return pPr.jc_val
 
     @alignment.setter
-    def alignment(self, value):
+    def alignment(self, value: WD_PARAGRAPH_ALIGNMENT | None):
         pPr = self._element.get_or_add_pPr()
         pPr.jc_val = value
 
     @property
-    def first_line_indent(self):
+    def first_line_indent(self) -> Length | None:
         """|Length| value specifying the relative difference in indentation for the
         first line of the paragraph.
 
@@ -42,12 +55,12 @@ class ParagraphFormat(ElementProxy):
         return pPr.first_line_indent
 
     @first_line_indent.setter
-    def first_line_indent(self, value):
+    def first_line_indent(self, value: Length | None):
         pPr = self._element.get_or_add_pPr()
         pPr.first_line_indent = value
 
     @property
-    def keep_together(self):
+    def keep_together(self) -> bool | None:
         """|True| if the paragraph should be kept "in one piece" and not broken across a
         page boundary when the document is rendered.
 
@@ -59,11 +72,11 @@ class ParagraphFormat(ElementProxy):
         return pPr.keepLines_val
 
     @keep_together.setter
-    def keep_together(self, value):
+    def keep_together(self, value: bool | None):
         self._element.get_or_add_pPr().keepLines_val = value
 
     @property
-    def keep_with_next(self):
+    def keep_with_next(self) -> bool | None:
         """|True| if the paragraph should be kept on the same page as the subsequent
         paragraph when the document is rendered.
 
@@ -77,11 +90,11 @@ class ParagraphFormat(ElementProxy):
         return pPr.keepNext_val
 
     @keep_with_next.setter
-    def keep_with_next(self, value):
+    def keep_with_next(self, value: bool | None):
         self._element.get_or_add_pPr().keepNext_val = value
 
     @property
-    def left_indent(self):
+    def left_indent(self) -> Length | None:
         """|Length| value specifying the space between the left margin and the left side
         of the paragraph.
 
@@ -95,12 +108,12 @@ class ParagraphFormat(ElementProxy):
         return pPr.ind_left
 
     @left_indent.setter
-    def left_indent(self, value):
+    def left_indent(self, value: Length | None):
         pPr = self._element.get_or_add_pPr()
         pPr.ind_left = value
 
     @property
-    def line_spacing(self):
+    def line_spacing(self) -> float | Length | None:
         """|float| or |Length| value specifying the space between baselines in
         successive lines of the paragraph.
 
@@ -117,7 +130,7 @@ class ParagraphFormat(ElementProxy):
         return self._line_spacing(pPr.spacing_line, pPr.spacing_lineRule)
 
     @line_spacing.setter
-    def line_spacing(self, value):
+    def line_spacing(self, value: float | Length | None):
         pPr = self._element.get_or_add_pPr()
         if value is None:
             pPr.spacing_line = None
@@ -127,11 +140,11 @@ class ParagraphFormat(ElementProxy):
             if pPr.spacing_lineRule != WD_LINE_SPACING.AT_LEAST:
                 pPr.spacing_lineRule = WD_LINE_SPACING.EXACTLY
         else:
-            pPr.spacing_line = Emu(value * Twips(240))
+            pPr.spacing_line = Emu(int(value * Twips(240)))
             pPr.spacing_lineRule = WD_LINE_SPACING.MULTIPLE
 
     @property
-    def line_spacing_rule(self):
+    def line_spacing_rule(self) -> WD_LINE_SPACING | None:
         """A member of the :ref:`WdLineSpacing` enumeration indicating how the value of
         :attr:`line_spacing` should be interpreted.
 
@@ -145,7 +158,7 @@ class ParagraphFormat(ElementProxy):
         return self._line_spacing_rule(pPr.spacing_line, pPr.spacing_lineRule)
 
     @line_spacing_rule.setter
-    def line_spacing_rule(self, value):
+    def line_spacing_rule(self, value: WD_LINE_SPACING | None):
         pPr = self._element.get_or_add_pPr()
         if value == WD_LINE_SPACING.SINGLE:
             pPr.spacing_line = Twips(240)
@@ -160,7 +173,7 @@ class ParagraphFormat(ElementProxy):
             pPr.spacing_lineRule = value
 
     @property
-    def page_break_before(self):
+    def page_break_before(self) -> bool | None:
         """|True| if the paragraph should appear at the top of the page following the
         prior paragraph.
 
@@ -172,11 +185,11 @@ class ParagraphFormat(ElementProxy):
         return pPr.pageBreakBefore_val
 
     @page_break_before.setter
-    def page_break_before(self, value):
+    def page_break_before(self, value: bool | None):
         self._element.get_or_add_pPr().pageBreakBefore_val = value
 
     @property
-    def right_indent(self):
+    def right_indent(self) -> Length | None:
         """|Length| value specifying the space between the right margin and the right
         side of the paragraph.
 
@@ -190,12 +203,12 @@ class ParagraphFormat(ElementProxy):
         return pPr.ind_right
 
     @right_indent.setter
-    def right_indent(self, value):
+    def right_indent(self, value: Length | None):
         pPr = self._element.get_or_add_pPr()
         pPr.ind_right = value
 
     @property
-    def space_after(self):
+    def space_after(self) -> Length | None:
         """|Length| value specifying the spacing to appear between this paragraph and
         the subsequent paragraph.
 
@@ -209,11 +222,11 @@ class ParagraphFormat(ElementProxy):
         return pPr.spacing_after
 
     @space_after.setter
-    def space_after(self, value):
+    def space_after(self, value: Length | None):
         self._element.get_or_add_pPr().spacing_after = value
 
     @property
-    def space_before(self):
+    def space_before(self) -> Length | None:
         """|Length| value specifying the spacing to appear between this paragraph and
         the prior paragraph.
 
@@ -227,18 +240,18 @@ class ParagraphFormat(ElementProxy):
         return pPr.spacing_before
 
     @space_before.setter
-    def space_before(self, value):
+    def space_before(self, value: Length | None):
         self._element.get_or_add_pPr().spacing_before = value
 
     @lazyproperty
-    def tab_stops(self):
+    def tab_stops(self) -> TabStops:
         """|TabStops| object providing access to the tab stops defined for this
         paragraph format."""
         pPr = self._element.get_or_add_pPr()
         return TabStops(pPr)
 
     @property
-    def widow_control(self):
+    def widow_control(self) -> bool | None:
         """|True| if the first and last lines in the paragraph remain on the same page
         as the rest of the paragraph when Word repaginates the document.
 
@@ -250,11 +263,13 @@ class ParagraphFormat(ElementProxy):
         return pPr.widowControl_val
 
     @widow_control.setter
-    def widow_control(self, value):
+    def widow_control(self, value: bool | None):
         self._element.get_or_add_pPr().widowControl_val = value
 
     @staticmethod
-    def _line_spacing(spacing_line, spacing_lineRule):
+    def _line_spacing(
+        spacing_line: Length | None, spacing_lineRule: WD_LINE_SPACING | None
+    ) -> float | Length | None:
         """Return the line spacing value calculated from the combination of
         `spacing_line` and `spacing_lineRule`.
 
@@ -269,7 +284,9 @@ class ParagraphFormat(ElementProxy):
         return spacing_line
 
     @staticmethod
-    def _line_spacing_rule(line, lineRule):
+    def _line_spacing_rule(
+        line: Length | None, lineRule: WD_LINE_SPACING | None
+    ) -> WD_LINE_SPACING | None:
         """Return the line spacing rule value calculated from the combination of `line`
         and `lineRule`.
 

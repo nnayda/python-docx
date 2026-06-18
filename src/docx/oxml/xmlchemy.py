@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Callable, Sequence, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Sequence, Type, TypeVar, cast
 
 from lxml import etree
 from lxml.etree import ElementBase, _Element  # pyright: ignore[reportPrivateUsage]
@@ -363,8 +363,8 @@ class _BaseChildElement:
         """Callable that creates an empty element of the right type, with no attrs."""
         from docx.oxml.parser import OxmlElement
 
-        def new_child_element(obj: BaseOxmlElement):
-            return OxmlElement(self._nsptagname)
+        def new_child_element(obj: BaseOxmlElement) -> BaseOxmlElement:
+            return cast("BaseOxmlElement", OxmlElement(self._nsptagname))
 
         return new_child_element
 
@@ -693,4 +693,4 @@ class BaseOxmlElement(etree.ElementBase, metaclass=MetaOxmlElement):
 
     @property
     def _nsptag(self) -> str:
-        return NamespacePrefixedTag.from_clark_name(self.tag)
+        return NamespacePrefixedTag.from_clark_name(cast("str", self.tag))

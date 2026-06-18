@@ -23,8 +23,14 @@ if TYPE_CHECKING:
     from docx.comments import Comments
     from docx.enum.style import WD_STYLE_TYPE
     from docx.opc.coreprops import CoreProperties
+    from docx.opc.packuri import PackURI
+    from docx.oxml.document import CT_Document
+    from docx.oxml.footnotes import CT_Footnotes
+    from docx.oxml.styles import CT_Styles
+    from docx.package import Package
     from docx.settings import Settings
     from docx.styles.style import BaseStyle
+    from docx.styles.styles import Styles
 
 
 class DocumentPart(StoryPart):
@@ -36,14 +42,22 @@ class DocumentPart(StoryPart):
     objects provides access to this part object for that purpose.
     """
 
+    def __init__(
+        self, partname: PackURI, content_type: str, element: CT_Document, package: Package
+    ):
+        super().__init__(partname, content_type, element, package)
+        self._element: CT_Document = element
+
     def add_footer_part(self):
         """Return (footer_part, rId) pair for newly-created footer part."""
+        assert self.package is not None
         footer_part = FooterPart.new(self.package)
         rId = self.relate_to(footer_part, RT.FOOTER)
         return footer_part, rId
 
     def add_header_part(self):
         """Return (header_part, rId) pair for newly-created header part."""
+        assert self.package is not None
         header_part = HeaderPart.new(self.package)
         rId = self.relate_to(header_part, RT.HEADER)
         return header_part, rId
@@ -56,11 +70,11 @@ class DocumentPart(StoryPart):
         caller to populate via `Footnote.add_paragraph()` / `Footnote.add_run()`.
         """
         self._ensure_footnote_styles()
-        footnotes = self.footnotes_part.element
-        footnote_id = footnotes._next_id
+        footnotes = cast("CT_Footnotes", self.footnotes_part.element)
+        footnote_id = footnotes._next_id  # pyright: ignore[reportPrivateUsage]
         ftn = footnotes.add_footnote(footnote_id)
         footnote = Footnote(ftn, self.footnotes_part)
-        footnote._add_marked_paragraph(text)
+        footnote._add_marked_paragraph(text)  # pyright: ignore[reportPrivateUsage]
         return footnote
 
     @property
@@ -72,6 +86,7 @@ class DocumentPart(StoryPart):
     def core_properties(self) -> CoreProperties:
         """A |CoreProperties| object providing read/write access to the core properties
         of this document."""
+        assert self.package is not None
         return self.package.core_properties
 
     @property
@@ -95,7 +110,9 @@ class DocumentPart(StoryPart):
         """
         return self.styles.get_by_id(style_id, style_type)
 
-    def get_style_id(self, style_or_name, style_type):
+    def get_style_id(
+        self, style_or_name: BaseStyle | str | None, style_type: WD_STYLE_TYPE
+    ) -> str | None:
         """Return the style_id (|str|) of the style of `style_type` matching
         `style_or_name`.
 
@@ -133,6 +150,7 @@ class DocumentPart(StoryPart):
         try:
             return cast(FootnotesPart, self.part_related_by(RT.FOOTNOTES))
         except KeyError:
+            assert self.package is not None
             footnotes_part = FootnotesPart.new(self.package)
             self.relate_to(footnotes_part, RT.FOOTNOTES)
             return footnotes_part
@@ -142,7 +160,7 @@ class DocumentPart(StoryPart):
 
         Idempotent: a style already defined (by id) is left untouched.
         """
-        styles_elm = self._styles_part.element
+        styles_elm = cast("CT_Styles", self._styles_part.element)
         for style_id, xml in (
             ("FootnoteText", self._FOOTNOTE_TEXT_STYLE_XML),
             ("FootnoteReference", self._FOOTNOTE_REFERENCE_STYLE_XML),
@@ -176,7 +194,7 @@ class DocumentPart(StoryPart):
 
         Idempotent: a style already defined (by id) is left untouched.
         """
-        styles_elm = self._styles_part.element
+        styles_elm = cast("CT_Styles", self._styles_part.element)
         if styles_elm.get_by_id("Hyperlink") is None:
             styles_elm.append(parse_xml(self._HYPERLINK_STYLE_XML % nsdecls("w")))
 
@@ -196,6 +214,7 @@ class DocumentPart(StoryPart):
     def save(self, path_or_stream: str | IO[bytes]):
         """Save this document to `path_or_stream`, which can be either a path to a
         filesystem location (a string) or a file-like object."""
+        assert self.package is not None
         self.package.save(path_or_stream)
 
     @property
@@ -205,7 +224,7 @@ class DocumentPart(StoryPart):
         return self._settings_part.settings
 
     @property
-    def styles(self):
+    def styles(self) -> Styles:
         """A |Styles| object providing access to the styles in the styles part of this
         document."""
         return self._styles_part.styles
@@ -234,6 +253,7 @@ class DocumentPart(StoryPart):
         try:
             return cast(SettingsPart, self.part_related_by(RT.SETTINGS))
         except KeyError:
+            assert self.package is not None
             settings_part = SettingsPart.default(self.package)
             self.relate_to(settings_part, RT.SETTINGS)
             return settings_part
